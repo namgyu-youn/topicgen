@@ -1,0 +1,8 @@
+# Environment
+env
+.env
+
+# Cache files
+*.pyc
+*.exe
+*.log
