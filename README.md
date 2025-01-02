@@ -1,12 +1,11 @@
 # GitHub Topic Generator
 
-It automatically generates relevant GitHub topics from README.md link. It uses zero-shot to analyze repository content and suggest appropriate topics based on the selected categories.
+It automatically generates relevant GitHub topics from **README.md URL**. It uses zero-shot to analyze repository content and suggest appropriate topics based on the selected categories.
 
 **⬇️ Sample Image ⬇️**
 
 <img width="900" alt="image" src="https://github.com/Namgyu-Youn/github-tag-generator/blob/main/src/image.png">
 
-![image|width="900"](https://github.com/user-attachments/assets/bbc5b0dd-137c-4d52-876c-3d2e9c3d0659)
 
 
 ``` mermaid
