@@ -6,3 +6,8 @@ env
 *.pyc
 *.exe
 *.log
+.pytest_cache
+
+# gradio
+flagged
+.gradio
