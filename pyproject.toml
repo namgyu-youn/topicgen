@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "github-tag-generator"
 version = "0.1.1"
-description = ""
+description = "GitHub Topic Generator using zero-shot for README.md analysis"
 authors = ["Namgyu-Youn <yynk2012@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.10,<3.13"
 gradio = "^5.9.1"
 torch = "^2.5.1"
 transformers = "^4.47.1"

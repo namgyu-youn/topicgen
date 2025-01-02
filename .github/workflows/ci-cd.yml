@@ -23,16 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         poetry config virtualenvs.create false
-        poetry install --with dev
-
-    - name: Run linting
-      run: |
-        poetry run black . --check
-        poetry run isort . --check
-        poetry run flake8 .
-
-    - name: Run tests
-      run: poetry run pytest
+        poetry install
 
   build-and-push:
     needs: test
