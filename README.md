@@ -9,7 +9,7 @@ It automatically generates relevant GitHub topics from README.md link. It uses z
 ![image|width="900"](https://github.com/user-attachments/assets/bbc5b0dd-137c-4d52-876c-3d2e9c3d0659)
 
 
-```
+``` mermaid
 flowchart TD
     subgraph Gradio Interface
         A[process_url]
@@ -40,6 +40,7 @@ flowchart TD
     class B,C core;
     class D data;
 ```
+
 ## Features
 - Analyzes GitHub repository README.md files
 - Generates relevant topics based on content analysis
