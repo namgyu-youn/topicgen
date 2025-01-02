@@ -9,11 +9,17 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 gradio = "^5.9.1"
-torch = "^2.5.1"
+torch = {version = "^2.5.1", source = "pytorch"}
 transformers = "^4.47.1"
 aiohttp = "^3.11.11"
 python-dotenv = "^1.0.1"
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
 
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core"]
