@@ -40,21 +40,22 @@ flowchart TD
     class B,C core;
     class D data;
 ```
+---
 
-## Features
+## ✨ Features
 - Analyzes GitHub repository README.md files
 - Generates relevant topics based on content analysis
 - Supports multiple categories including Data & AI, Scientific Research
 - Provides topic recommendations based on category selection
 - User-friendly Gradio interface
 
-## Prerequisites
+## ➕ Prerequisites
 - Python 3.10 or higher
 - Docker (optional)
 - Poetry (optional)
 - transformer
 
-## Installation
+## 🚩 Installation
 
 ### Option 1: Standard Python Setup
 
@@ -105,7 +106,7 @@ cd github-topic-generator
 docker-compose up --build
 ```
 
-## Usage
+## 🚀 Usage
 
 ### Running the Application
 
@@ -156,9 +157,6 @@ poetry run pytest
 # Using standard Python setup
 pytest
 ```
-
-## License
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request. 💡
