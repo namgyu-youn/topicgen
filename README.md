@@ -133,29 +133,7 @@ http://localhost:7860
 3. Choose a sub-category for more specific topic generation
 4. Click "Generate Topics" to get your results
 
-## Development
 
-### Project Structure
-```
-github-topic-generator/
-├── gradio_app.py          # Gradio interface
-├── topic_gen/
-│   ├── analyzer.py        # Topic analysis logic
-│   ├── fetcher.py        # GitHub README fetcher
-│   └── topic_hierarchy.py # Topic categories
-├── docker-compose.yml
-├── Dockerfile
-└── requirements.txt
-```
-
-### Running Tests
-```bash
-# Using Poetry
-poetry run pytest
-
-# Using standard Python setup
-pytest
-```
-
-## Contributing
-Contributions are welcome! Please feel free to submit a Pull Request. 💡
+## 👥 Contribution guide : [CONTRIBUTING.md](https://github.com/Namgyu-Youn/github-topic-generator/blob/main/CONTRIBUTING.md)
+Thanks for your interest. I always enjoy meaningful collaboration. <br/>
+Do you have any question or bug?? Then submit **ISSUE**. You can also use awsome labels(🏷️).
