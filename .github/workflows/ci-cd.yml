@@ -21,7 +21,9 @@ jobs:
       uses: snok/install-poetry@v1
 
     - name: Install dependencies
-      run: poetry install
+      run: |
+        poetry config virtualenvs.create false
+        poetry install --with dev
 
     - name: Run linting
       run: |
