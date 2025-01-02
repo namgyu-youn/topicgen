@@ -4,7 +4,11 @@ from .topic_hierarchy import TOPIC_HIERARCHY
 
 class TopicAnalyzer:
     def __init__(self):
-        self.classifier = pipeline("zero-shot-classification")
+        self.classifier = pipeline(
+            "zero-shot-classification",
+            model="facebook/bart-large-mnli",
+            device="cpu"
+            )
         self.topic_hierarchy = TOPIC_HIERARCHY
 
     async def generate_topics(
