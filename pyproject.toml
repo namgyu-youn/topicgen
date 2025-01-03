@@ -1,21 +1,24 @@
 [tool.poetry]
-name = "github-tag-generator"
-version = "0.1.1"
-description = "GitHub Topic Generator using zero-shot for README.md analysis"
+name = "github-topic-generator"
+version = "0.1.2"
+description = "GitHub repository topic generator using AI"
 authors = ["Namgyu-Youn <yynk2012@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.9,<3.13"
 gradio = "^5.9.1"
 torch = {version = "^2.5.1", source = "pytorch"}
 transformers = "^4.47.1"
 aiohttp = "^3.11.11"
 python-dotenv = "^1.0.1"
-pytest = "^7.4.0"
-pytest-asyncio = "^0.21.0"
 ruff = "^0.8.5"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.21.0"
 
 [[tool.poetry.source]]
 name = "pytorch"
@@ -23,5 +26,5 @@ url = "https://download.pytorch.org/whl/cpu"
 priority = "explicit"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"

@@ -18,19 +18,12 @@ class GitHubFetcher:
 
         owner = path_parts[0]
         repo = path_parts[1]
-
-        if "blob" in path_parts:
-            blob_index = path_parts.index("blob")
-            branch = path_parts[blob_index + 1]
-            file_path = "/".join(path_parts[blob_index + 2:])
-        else:
-            branch = "main"
-            file_path = "README.md"
+        branch = "main"
+        file_path = "README.md"
 
         return owner, repo, branch, file_path
 
     async def fetch_readme(self, url: str) -> str:
-        """Fetch README content from GitHub URL."""
         try:
             owner, repo, branch, file_path = self.parse_github_url(url)
             raw_url = f"{self.base_url}/{owner}/{repo}/{branch}/{file_path}"
