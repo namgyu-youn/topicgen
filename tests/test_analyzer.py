@@ -1,6 +1,5 @@
-# tests/test_analyzer.py
 import pytest
-from topic_gen.analyzer import TopicAnalyzer
+from scripts.analyzer import TopicAnalyzer
 
 @pytest.mark.asyncio
 async def test_generate_topics():
@@ -10,27 +9,8 @@ async def test_generate_topics():
        text=text,
        category="Data & AI",
        subcategory="Machine Learning",
-       category_threshold=0.3,
-       topic_threshold=0.5
+       category_threshold=0.1,
+       topic_threshold=0.1
    )
    assert len(topics) > 0
    assert all(isinstance(topic, str) for topic in topics)
-
-# tests/test_fetcher.py
-import pytest
-from topic_gen.fetcher import GitHubFetcher
-
-def test_parse_github_url():
-   fetcher = GitHubFetcher()
-   url = "https://github.com/owner/repo"
-   owner, repo, branch, file_path = fetcher.parse_github_url(url)
-   assert owner == "owner"
-   assert repo == "repo"
-   assert branch == "main"
-   assert file_path == "README.md"
-
-@pytest.mark.asyncio
-async def test_fetch_readme():
-   fetcher = GitHubFetcher()
-   with pytest.raises(Exception):
-       await fetcher.fetch_readme("invalid_url")

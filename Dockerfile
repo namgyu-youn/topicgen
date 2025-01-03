@@ -9,12 +9,6 @@ FROM python:3.12.3-slim
 
 WORKDIR /app
 
-# Build initial setup
-RUN apt-get update && apt-get install -y \
-    libglib2.0-0 \
-    libgl1-mesa-glx \
-    curl \
-
 # Install system package
 COPY --from=requirements-stage /tmp/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
