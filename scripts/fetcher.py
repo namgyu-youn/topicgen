@@ -18,30 +18,20 @@ class GitHubFetcher:
 
         owner = path_parts[0]
         repo = path_parts[1]
-
-        if "blob" in path_parts:
-            blob_index = path_parts.index("blob")
-            branch = path_parts[blob_index + 1]
-            file_path = "/".join(path_parts[blob_index + 2:])
-        else:
-            branch = "main"
-            file_path = "README.md"
+        branch = "main"
+        file_path = "README.md"
 
         return owner, repo, branch, file_path
 
-async def _fetch_core_files(self, repo_url: str) -> Dict[str, str]:
-    owner, repo, branch = self.parse_github_url(repo_url)
+    async def fetch_readme(self, url: str) -> str:
+        try:
+            owner, repo, branch, file_path = self.parse_github_url(url)
+            raw_url = f"{self.base_url}/{owner}/{repo}/{branch}/{file_path}"
 
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-        for file in self.CORE_FILES:
-            url = f"{self.base_url}/{owner}/{repo}/{branch}/{file}"
-            tasks.append(self._fetch_file(session, url))
+            async with aiohttp.ClientSession() as session:
+                async with session.get(raw_url) as response:
+                    response.raise_for_status()
+                    return await response.text()
 
-        results = await asyncio.gather(*tasks)
-
-        return {
-            file: content
-            for file, content in zip(self.CORE_FILES, results)
-            if content
-        }
+        except Exception as e:
+            raise Exception(f"Failed to fetch README: {str(e)}")

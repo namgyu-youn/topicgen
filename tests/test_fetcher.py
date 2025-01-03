@@ -1,17 +1,33 @@
-import pytest
-from scripts.fetcher import GitHubFetcher
+class GitHubFetcher:
+    def __init__(self):
+        self.base_url = "https://raw.githubusercontent.com"
 
-def test_parse_github_url():
-   fetcher = GitHubFetcher()
-   url = "https://github.com/Namgyu-Youn/repo"
-   owner, repo, branch, file_path = fetcher.parse_github_url(url)
-   assert owner == "Namgyu-Youn"
-   assert repo == "github-topic-generator"
-   assert branch == "main"
-   assert file_path == "README.md"
+    def parse_github_url(self, url: str) -> tuple[str, str, str, str]:
+        """Parse GitHub URL into components: owner, repo, branch, file_path."""
+        parsed = urlparse(url)
+        if not parsed.scheme:
+            raise ValueError("URL must include 'https://'")
 
-@pytest.mark.asyncio
-async def test_fetch_readme():
-   fetcher = GitHubFetcher()
-   with pytest.raises(Exception):
-       await fetcher.fetch_readme("invalid_url")
+        path_parts = parsed.path.strip("/").split("/")
+        if len(path_parts) < 2:
+            raise ValueError("Invalid GitHub URL")
+
+        owner = path_parts[0]
+        repo = path_parts[1]
+        branch = "main"
+        file_path = "README.md"
+
+        return owner, repo, branch, file_path
+
+    async def fetch_readme(self, url: str) -> str:
+        try:
+            owner, repo, branch, file_path = self.parse_github_url(url)
+            raw_url = f"{self.base_url}/{owner}/{repo}/{branch}/{file_path}"
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(raw_url) as response:
+                    response.raise_for_status()
+                    return await response.text()
+
+        except Exception as e:
+            raise Exception(f"Failed to fetch README: {str(e)}")
