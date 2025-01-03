@@ -2,7 +2,7 @@
 
 It automatically generates relevant GitHub topics from **README.md URL**. It uses zero-shot to analyze repository content and suggest appropriate topics based on the selected categories.
 
-**⬇️ Sample Image ⬇️**
+**⬇️ Sample Image ⬇️** (Try here : [Hugging face URL](https://huggingface.co/spaces/Namgyu-Youn/tag-generator))
 
 <img width="900" alt="image" src="https://github.com/Namgyu-Youn/github-tag-generator/blob/main/src/image.png">
 
