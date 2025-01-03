@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.10,<3.13"
 gradio = "^5.9.1"
 torch = {version = "^2.5.1", source = "pytorch"}
 transformers = "^4.47.1"
