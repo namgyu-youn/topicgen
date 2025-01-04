@@ -17,7 +17,7 @@ python-dotenv = "^1.0.1"
 ruff = "^0.8.5"
 tiktoken = "^0.5.2"
 protobuf = "^4.25.3"
-sentencepiece = "^0.1.99"
+sentencepiece = "*"
 tokenizers = ">=0.21,<0.22"
 
 [tool.poetry.group.dev.dependencies]
