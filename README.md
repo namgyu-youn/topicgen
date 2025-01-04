@@ -1,137 +1,92 @@
 # GitHub Topic Generator
 
-It automatically generates relevant GitHub topics from **README.md URL**. It uses zero-shot to analyze repository content and suggest appropriate topics based on the selected categories.
+It automatically generates relevant GitHub topics from **GitHub URL**. It uses zero-shot to analyze repository content and suggest appropriate topics based on the selected categories.
 
-**⬇️ Sample Image ⬇️** (Try here 😜 : [Hugging Face](https://huggingface.co/spaces/Namgyu-Youn/tag-generator))
+Try here : [Hugging Face Space](https://huggingface.co/spaces/Namgyu-Youn/topic-generator)
 
-<img width="900" alt="image" src="https://github.com/Namgyu-Youn/github-tag-generator/blob/main/src/image.png">
+**⬇️ Sample Image ⬇️**
 
+<img width="900" alt="image" src="https://github.com/Namgyu-Youn/github-tag-generator/blob/main/src/sample.png">
+
+<img width="900" alt="image" src="https://github.com/Namgyu-Youn/github-tag-generator/blob/main/src/sample_noCUDA.png">
 
 
 ``` mermaid
-flowchart TD
-    subgraph Gradio Interface
-        A[process_url]
+graph TD
+    subgraph Docker Container
+        A[Docker: Python 3.12 Slim] --> B[Gradio Web Interface]
+        B --> C[GitHub Analyzer]
+
+        subgraph Analysis Process
+            C --> D[Fetch Repository Files]
+            D --> E[Extract Dependencies]
+            D --> F[Process Content]
+            F --> G[Zero-shot Classification<br>DeBERTa-v3]
+            G --> H[Generate Topics]
+        end
+
+        H --> B
     end
 
-    subgraph Fetcher
-        B[fetch_readme]
-    end
-
-    subgraph Analyzer
-        C[generate_topics]
-    end
-
-    subgraph Topic Hierarchy
-        D[topic_tags]
-    end
-
-    A -->|GitHub URL| B
-    B -->|README Content| C
-    D -->|Category Topics| C
-    C -->|Generated Topics| A
-
-    classDef interface fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef core fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef data fill:#bfb,stroke:#333,stroke-width:2px;
-
-    class A interface;
-    class B,C core;
-    class D data;
+    style Docker Container fill:#e6f3ff,stroke:#666
+    style Analysis Process fill:#f9f9f9,stroke:#999
+    style G fill:#ffe6e6,stroke:#666
+    style B fill:#e6ffe6,stroke:#666
 ```
----
 
 ## ✨ Features
-- Analyzes GitHub repository README.md files
-- Generates relevant topics based on content analysis
+- **Analyzes GitHub repository files** (README.md, requirements.txt, .. etc.)
+- Generates relevant topics based on **content analysis**
 - Supports multiple categories including Data & AI, Scientific Research
 - Provides topic recommendations based on category selection
-- User-friendly Gradio interface
 
 ## ➕ Prerequisites
 - Python 3.10 or higher
-- Docker (optional)
-- Poetry (optional)
+- Optional : Docker, Poetry
 - transformer
+- aiohttp
 
-## 🚩 Installation
+## 🚩 How to use?
 
-### Option 1: Standard Python Setup
-
-1. Clone the repository
-```bash
+``` bash
 git clone https://github.com/Namgyu-Youn/github-topic-generator.git
 cd github-topic-generator
 ```
 
-2. Create and activate virtual environment
+### Option 1: Using Poetry (Higly Recommended)
 ```bash
-python -m venv env
-# On Windows
-env\Scripts\activate
-# On macOS/Linux
-source env/bin/activate
-```
+curl -sSL https://install.python-poetry.org | python3 - # Optional
 
-3. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### Option 2: Using Poetry
-
-1. Install Poetry
-```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-2. Clone and install dependencies
-```bash
-git clone https://github.com/Namgyu-Youn/github-topic-generator.git
-cd github-topic-generator
 poetry install
+poetry run python app.py
 ```
 
-### Option 3: Using Docker
-
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/github-topic-generator.git
-cd github-topic-generator
-```
-
-2. Build and run with Docker Compose
+### Option 2: Using Docker
 ```bash
 docker-compose up --build
 ```
 
-## 🚀 Usage
-
-### Running the Application
-
-1. Start the Gradio interface:
+### Option 3: Standard Python Setup
 ```bash
-# If using standard Python setup
-python gradio_app.py
+python -m venv env
 
-# If using Poetry
-poetry run python gradio_app.py
+# On Windows
+env\Scripts\activate
+# On macOS/Linux
+source env/bin/activate
 
-# If using Docker
-# The application will start automatically after docker-compose up
+pip install -r requirements.txt
+python app.py
 ```
 
-2. Open your web browser and navigate to:
-```
-http://localhost:7860
-```
+## 🧐 Introduction about gradio UI
 
-### Using the Interface
+1. Enter GitHub URL
+2. Select the main, sub category that best matches your repository
+3. Click "Generate Topics" to get your results
+4. Enjoy generated topics('#')! It can be used like this.
 
-1. Enter a GitHub README.md URL
-2. Select the main category that best matches your repository
-3. Choose a sub-category for more specific topic generation
-4. Click "Generate Topics" to get your results
+<img width="900" alt="image" src="https://github.com/Namgyu-Youn/github-tag-generator/blob/main/src/sample_usage.png">
 
 
 ## 👥 Contribution guide : [CONTRIBUTING.md](https://github.com/Namgyu-Youn/github-topic-generator/blob/main/CONTRIBUTING.md)
