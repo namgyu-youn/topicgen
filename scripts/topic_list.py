@@ -1,4 +1,4 @@
-TOPIC_HIERARCHY = {
+TOPIC_LIST = {
     "Data & AI": {
         "Machine Learning": [
             "Supervised-Learning", "Unsupervised-Learning", "Neural-Networks",
