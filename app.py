@@ -1,8 +1,10 @@
 import gradio as gr
 from scripts.github_analyzer import GitHubAnalyzer
-from scripts.topic_list import TOPIC_HIERARCHY
+from scripts.topic_list import TOPIC_LIST
+from scripts.error_handler import ErrorHandler
 
 analyzer = GitHubAnalyzer()
+error_handler = ErrorHandler()
 
 async def process_url(
     url: str,
@@ -12,30 +14,38 @@ async def process_url(
 ) -> tuple[str, str, str]:
     try:
         if not all([url, main_cat, sub_cat]):
-            return "Please select all categories", "", ""
+            response = error_handler.handle_github_url_error(
+                url,
+                "Please select all categories"
+            )
+            return response.errors[0].message, "", ""
 
         analyzer.set_device("cuda" if use_gpu else "cpu")
-        results = await analyzer.analyze_repository(url, main_cat, sub_cat)
+        response = await analyzer.analyze_repository(url, main_cat, sub_cat)
 
-        if "error" in results:
-            return results["error"], "", ""
+        if not response.success:
+            return response.errors[0].message, "", ""
 
         readme_topics = " ".join([
             f"#{topic['topic'].lower()} ({topic['score']:.2f})"
-            for topic in results["readme_topics"]
+            for topic in response.data["readme_topics"]
         ])
 
         code_topics = " ".join([
             f"#{topic['topic'].lower()} ({topic['score']:.2f})"
-            for topic in results["code_topics"]
+            for topic in response.data["code_topics"]
         ])
 
-        dependencies = " ".join([f"#{dep.lower()}" for dep in results["dependencies"]])
+        dependencies = " ".join([
+            f"#{dep.lower()}"
+            for dep in response.data["dependencies"]
+        ])
 
         return readme_topics, code_topics, dependencies
 
     except Exception as e:
-        return f"Error: {str(e)}", "", ""
+        response = error_handler.handle_topic_analysis_error(str(e))
+        return response.errors[0].message, "", ""
 
 def create_interface():
     with gr.Blocks() as demo:
@@ -49,7 +59,7 @@ def create_interface():
 
         with gr.Row():
             main_category = gr.Dropdown(
-                choices=[None] + list(TOPIC_HIERARCHY.keys()),
+                choices=[None] + list(TOPIC_LIST.keys()),
                 label="Main Category",
                 value=None
             )
@@ -74,7 +84,7 @@ def create_interface():
 
         def update_sub_category(main_cat):
             return gr.Dropdown(
-                choices=list(TOPIC_HIERARCHY[main_cat].keys()) if main_cat else []
+                choices=list(TOPIC_LIST[main_cat].keys()) if main_cat else []
             )
 
         main_category.change(
