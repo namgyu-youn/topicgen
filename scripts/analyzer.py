@@ -1,5 +1,6 @@
 from transformers import pipeline
 from typing import List, Dict
+from topic_list import TOPIC_HIERARCHY
 
 class TopicAnalyzer:
     def __init__(self):
@@ -17,7 +18,8 @@ class TopicAnalyzer:
         self.classifier = pipeline(
             "zero-shot-classification",
             model="microsoft/deberta-v3-base",
-            device=self.device
+            device=self.device,
+            use_fast=False
         )
 
     async def generate_topics(self, text: str, category: str, subcategory: str) -> List[Dict]:

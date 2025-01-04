@@ -1,6 +1,6 @@
 import gradio as gr
 from scripts.github_analyzer import GitHubAnalyzer
-from scripts.topic_hierarchy import TOPIC_HIERARCHY
+from scripts.topic_list import TOPIC_HIERARCHY
 
 analyzer = GitHubAnalyzer()
 
