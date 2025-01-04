@@ -1,10 +1,13 @@
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 import aiohttp
 from urllib.parse import urlparse
 from .analyzer import TopicAnalyzer
 from .error_handler import ErrorHandler
 
 class GitHubAnalyzer:
+    """
+    Analyzer for GitHub repositories that processes files and generates topics
+    """
     CORE_FILES = [
         'README.md',
         'requirements.txt',
@@ -16,12 +19,33 @@ class GitHubAnalyzer:
     ]
 
     def __init__(self):
+        """Initialize the GitHubAnalyzer with base URL and required components"""
         self.base_url = "https://raw.githubusercontent.com"
         self.topic_analyzer = TopicAnalyzer()
         self.error_handler = ErrorHandler()
 
-    def parse_github_url(self, url: str) -> tuple[str, str, str]:
-        """Parse GitHub URL into components."""
+    def set_device(self, device: str):
+        """
+        Set the device for the topic analyzer
+
+        Args:
+            device: Device to use ('cpu' or 'cuda')
+        """
+        self.topic_analyzer.set_device(device)
+
+    def parse_github_url(self, url: str) -> Tuple[str, str, str]:
+        """
+        Parse GitHub URL into components
+
+        Args:
+            url: GitHub repository URL
+
+        Returns:
+            Tuple containing (owner, repo, branch)
+
+        Raises:
+            ValueError: If URL format is invalid
+        """
         try:
             parsed = urlparse(url)
             path_parts = parsed.path.strip("/").split("/")
@@ -41,17 +65,121 @@ class GitHubAnalyzer:
             return self.error_handler.handle_github_url_error(url, str(e))
 
     async def _fetch_file(self, session: aiohttp.ClientSession, url: str) -> Optional[str]:
-        """Fetch a single file content."""
+        """
+        Fetch a single file content from GitHub
+
+        Args:
+            session: aiohttp client session
+            url: URL of the file to fetch
+
+        Returns:
+            File content or None if fetch fails
+        """
         try:
             async with session.get(url) as response:
                 if response.status == 200:
                     return await response.text()
-                return self.error_handler.handle_file_fetch_error(
-                    url,
-                    f"HTTP {response.status}"
-                )
-        except Exception as e:
-            return self.error_handler.handle_file_fetch_error(url, str(e))
+                return None
+        except Exception:
+            return None
+
+    async def _fetch_core_files(self, repo_url: str) -> Dict[str, str]:
+        """
+        Fetch content of core files from repository
+
+        Args:
+            repo_url: GitHub repository URL
+
+        Returns:
+            Dictionary mapping filenames to their content
+        """
+        owner, repo, branch = self.parse_github_url(repo_url)
+        files_content = {}
+
+        async with aiohttp.ClientSession() as session:
+            for file in self.CORE_FILES:
+                url = f"{self.base_url}/{owner}/{repo}/{branch}/{file}"
+                content = await self._fetch_file(session, url)
+                if content:
+                    files_content[file] = content
+
+        return files_content
+
+    def _parse_poetry_deps(self, content: str) -> List[str]:
+        """
+        Parse dependencies from pyproject.toml content
+
+        Args:
+            content: Content of pyproject.toml file
+
+        Returns:
+            List of dependency names
+        """
+        deps = set()
+        in_deps_section = False
+
+        for line in content.split('\n'):
+            line = line.strip()
+
+            # Check if we're entering the dependencies section
+            if '[tool.poetry.dependencies]' in line:
+                in_deps_section = True
+                continue
+
+            # Check if we're exiting the dependencies section
+            if in_deps_section and line.startswith('['):
+                in_deps_section = False
+                continue
+
+            # Parse dependency line if we're in the dependencies section
+            if in_deps_section and '=' in line:
+                # Handle different poetry dependency formats
+                package = line.split('=')[0].strip()
+                # Remove quotes if present
+                package = package.strip('"\'')
+
+                # Skip python dependency
+                if package.lower() != 'python':
+                    deps.add(package)
+
+        return list(deps)
+
+    async def _analyze_dependencies(self, files_content: Dict[str, str]) -> List[str]:
+        """
+        Extract dependencies from requirement files
+
+        Args:
+            files_content: Dictionary of file contents
+
+        Returns:
+            List of dependency names from all requirements files
+        """
+        deps = set()
+
+        # Parse requirements.txt
+        if 'requirements.txt' in files_content:
+            for line in files_content['requirements.txt'].split('\n'):
+                if line and not line.startswith('#'):
+                    package = line.split('==')[0].split('>=')[0].strip()
+                    deps.add(package)
+
+        # Parse pyproject.toml
+        if 'pyproject.toml' in files_content:
+            content = files_content['pyproject.toml']
+            if '[tool.poetry.dependencies]' in content:
+                deps.update(self._parse_poetry_deps(content))
+
+        # Parse package.json
+        if 'package.json' in files_content:
+            try:
+                import json
+                pkg_json = json.loads(files_content['package.json'])
+                deps.update(pkg_json.get('dependencies', {}).keys())
+                deps.update(pkg_json.get('devDependencies', {}).keys())
+            except json.JSONDecodeError:
+                pass
+
+        return list(deps)
 
     async def analyze_repository(
         self,
@@ -59,7 +187,17 @@ class GitHubAnalyzer:
         category: str,
         subcategory: str
     ) -> Dict[str, Any]:
-        """Analyze repository and generate comprehensive topics."""
+        """
+        Analyze repository and generate comprehensive topics
+
+        Args:
+            repo_url: GitHub repository URL
+            category: Main category for topic classification
+            subcategory: Sub-category for topic classification
+
+        Returns:
+            Dictionary containing analysis results including topics and dependencies
+        """
         try:
             files_content = await self._fetch_core_files(repo_url)
             if not files_content:
