@@ -5,6 +5,7 @@ description = "GitHub repository topic generator using AI"
 authors = ["Namgyu-Youn <yynk2012@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
@@ -14,6 +15,10 @@ transformers = "^4.47.1"
 aiohttp = "^3.11.11"
 python-dotenv = "^1.0.1"
 ruff = "^0.8.5"
+tiktoken = "^0.5.2"
+protobuf = "^4.25.3"
+sentencepiece = "^0.1.99"
+tokenizers = ">=0.21,<0.22"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
