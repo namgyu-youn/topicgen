@@ -1,0 +1,31 @@
+source:
+  path: ../../
+
+build:
+  noarch: python
+
+requirements:
+  host:
+    - numpy
+    - torch
+    - transformers
+    - gradio
+    - aiohttp
+    - python-dotenv
+  run:
+    - numpy
+    - torch
+    - transformers
+    - gradio
+    - aiohttp
+    - python-dotenv
+
+test:
+  imports:
+    - transformers
+
+about:
+  home: https://github.com/Namgyu-Youn/github-topic-generator
+  license: MIT
+  license_file: LICENSE
+  summary: "github-topic-generator : Generate related topics('#') by analyzing your source code."

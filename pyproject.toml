@@ -33,3 +33,44 @@ priority = "explicit"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+target-version = ['py39', 'py310']
+include = '\.pyi?$'
+extend-exclude = '''
+(
+    logs/|
+    .pytest_cache/|
+    __pycache__
+)
+'''
+
+[tool.ruff]
+line-length = 150
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "RUF",  # Ruff-specific rules
+    "I",    # isort
+    "D",    # pydocstyle
+    "C4",   # flake8-comprehensions
+]
+ignore = [
+    "D100",  # Missing docstring in public module
+    "D101",  # Missing docstring in public class
+    "D102",  # Missing docstring in public method
+    "D103",  # Missing docstring in public function
+    "D107",  # Missing docstring in __init__
+    "D400",  # First line should end with a period
+    "D415",  # First line should end with period, question mark, or exclamation point
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D", "PLR2004"]
+"scripts/*" = ["T20"]

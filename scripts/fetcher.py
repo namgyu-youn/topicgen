@@ -1,5 +1,7 @@
-import aiohttp
 from urllib.parse import urlparse
+
+import aiohttp
+
 
 class GitHubFetcher:
     def __init__(self):
@@ -24,6 +26,18 @@ class GitHubFetcher:
         return owner, repo, branch, file_path
 
     async def fetch_readme(self, url: str) -> str:
+        """Fetch README content from a GitHub repository.
+
+        Args:
+            url: GitHub repository URL
+
+        Returns:
+            The content of the README file
+
+        Raises:
+            Exception: If fetching fails for any reason
+
+        """
         try:
             owner, repo, branch, file_path = self.parse_github_url(url)
             raw_url = f"{self.base_url}/{owner}/{repo}/{branch}/{file_path}"
@@ -32,6 +46,5 @@ class GitHubFetcher:
                 async with session.get(raw_url) as response:
                     response.raise_for_status()
                     return await response.text()
-
         except Exception as e:
-            raise Exception(f"Failed to fetch README: {str(e)}")
+            raise Exception(f"Failed to fetch README: {e!s}") from e
