@@ -11,3 +11,6 @@ env
 # gradio
 flagged
 .gradio
+
+# Ruff
+-unsafe-fixes
