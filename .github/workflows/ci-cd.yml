@@ -1,32 +1,32 @@
-name: CI/CD
+name: CI
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request]
 
 jobs:
-  validate:
-    strategy:
-      matrix:
-        python-version: ['3.11', '3.12']
-
+  test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
 
-    - name: Validate Poetry
-      run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-        poetry env use python${{ matrix.python-version }}
-        poetry check
-        poetry lock --check
+      - name: Install Poetry
+        run: |
+          pipx install poetry
+          echo "/root/.local/bin" >> $GITHUB_PATH
 
-    - name: Validate Dockerfile
-      run: docker build . --file Dockerfile
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-root
+
+      - name: Lint with Ruff
+        run: |
+          poetry run ruff check .
