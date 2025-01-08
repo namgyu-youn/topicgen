@@ -19,7 +19,8 @@ class GitHubAnalyzer:
         self.error_handler = ErrorHandler()
 
     def set_device(self, device: str):
-        """Set the device for the topic analyzer
+        """
+        Set the device for the topic analyzer
 
         Args:
             device: Device to use ('cpu' or 'cuda')
@@ -28,7 +29,8 @@ class GitHubAnalyzer:
         self.topic_analyzer.set_device(device)
 
     def parse_github_url(self, url: str) -> tuple[str, str, str]:
-        """Parse GitHub URL into components
+        """
+        Parse GitHub URL into components
 
         Args:
             url: GitHub repository URL
@@ -56,7 +58,8 @@ class GitHubAnalyzer:
             return self.error_handler.handle_github_url_error(url, str(e))
 
     async def _fetch_file(self, session: aiohttp.ClientSession, url: str) -> Optional[str]:
-        """Fetch a single file content from GitHub
+        """
+        Fetch a single file content from GitHub
 
         Args:
             session: aiohttp client session
@@ -75,7 +78,8 @@ class GitHubAnalyzer:
             return None
 
     async def _fetch_core_files(self, repo_url: str) -> dict[str, str]:
-        """Fetch content of core files from repository
+        """
+        Fetch content of core files from repository
 
         Args:
             repo_url: GitHub repository URL
@@ -97,7 +101,8 @@ class GitHubAnalyzer:
         return files_content
 
     def _parse_poetry_deps(self, content: str) -> list[str]:
-        """Parse dependencies from pyproject.toml content
+        """
+        Parse dependencies from pyproject.toml content
 
         Args:
             content: Content of pyproject.toml file
@@ -136,7 +141,8 @@ class GitHubAnalyzer:
         return list(deps)
 
     async def _analyze_dependencies(self, files_content: dict[str, str]) -> list[str]:
-        """Extract dependencies from requirement files
+        """
+        Extract dependencies from requirement files
 
         Args:
             files_content: Dictionary of file contents
@@ -174,7 +180,8 @@ class GitHubAnalyzer:
         return list(deps)
 
     async def analyze_repository(self, repo_url: str, category: str, subcategory: str) -> dict[str, Any]:
-        """Analyze repository and generate comprehensive topics
+        """
+        Analyze repository and generate comprehensive topics
 
         Args:
             repo_url: GitHub repository URL

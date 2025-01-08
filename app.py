@@ -7,7 +7,8 @@ analyzer = GitHubAnalyzer()
 
 
 async def process_url(url: str, main_cat: str, sub_cat: str, use_gpu: bool) -> tuple[str, str, str]:
-    """Process GitHub URL and generate topics
+    """
+    Process GitHub URL and generate topics
 
     Args:
         url: GitHub repository URL

@@ -68,7 +68,8 @@ class ErrorHandler:
 
     @staticmethod
     def handle_github_url_error(url: str, error_message: str) -> APIResponse:
-        """Handle GitHub URL related errors
+        """
+        Handle GitHub URL related errors
 
         Args:
             url: The problematic URL
@@ -85,7 +86,8 @@ class ErrorHandler:
 
     @staticmethod
     def handle_topic_analysis_error(error_message: str, context: Optional[dict[str, Any]] = None) -> APIResponse:
-        """Handle topic analysis related errors
+        """
+        Handle topic analysis related errors
 
         Args:
             error_message: Description of the error
@@ -102,7 +104,8 @@ class ErrorHandler:
 
     @staticmethod
     def handle_file_fetch_error(file_path: str, error_message: str) -> APIResponse:
-        """Handle file fetching related errors
+        """
+        Handle file fetching related errors
 
         Args:
             file_path: Path of the file that failed to fetch
@@ -119,7 +122,8 @@ class ErrorHandler:
 
     @staticmethod
     def success_response(data: dict[str, Any]) -> APIResponse:
-        """Create a success response
+        """
+        Create a success response
 
         Args:
             data: The response data to be returned

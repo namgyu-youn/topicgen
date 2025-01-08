@@ -67,6 +67,8 @@ ignore = [
     "D102",  # Missing docstring in public method
     "D103",  # Missing docstring in public function
     "D107",  # Missing docstring in __init__
+    "D203",  # one-blank-line-before-class
+    "D212",  # multi-line-summary-first-line
     "D400",  # First line should end with a period
     "D415",  # First line should end with period, question mark, or exclamation point
 ]
