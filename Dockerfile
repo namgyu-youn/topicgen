@@ -1,52 +1,47 @@
+# Dockerfile
 FROM python:3.12.3-slim as builder
 
 WORKDIR /app
 
-# Install system dependencies required for building
+# Install only necessary system dependencies
 RUN apt-get update && apt-get install -y \
     protobuf-compiler \
     gcc \
-    g++ \
-    cmake \
-    pkg-config \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install poetry
-RUN pip install poetry
+# Install and configure Poetry
+RUN pip install poetry && \
+    poetry config virtualenvs.create false
 
-# Copy dependency files
+# Copy dependency files and install
 COPY pyproject.toml poetry.lock ./
+RUN poetry install --no-interaction --no-ansi --no-root --without dev
 
-# Configure poetry and install dependencies
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --no-root
-
-# Second stage
+# Runtime environment
 FROM python:3.12.3-slim
 
 WORKDIR /app
 
-# Copy installed dependencies from builder
+# Copy only necessary files from builder
 COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
-# Install runtime system dependencies
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     protobuf-compiler \
+    curl \  # Required for healthcheck
     && rm -rf /var/lib/apt/lists/*
 
 # Copy application code
 COPY . .
 
-# Create non-root user
+# Security: Create non-root user and set permissions
 RUN useradd -m appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 7860
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:7860/ || exit 1
 
