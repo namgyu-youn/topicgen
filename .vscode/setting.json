@@ -1,17 +1,48 @@
 {
-    "python.formatting.provider": "black",
+    // Global editor settings
     "editor.formatOnSave": true,
+    "editor.renderWhitespace": "trailing",
+    "editor.wordWrap": "off",
     "editor.rulers": [120],
+
+    // File handling
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.eol": "\n",
+
+    // Python general settings
     "python.linting.enabled": true,
-    "python.linting.ruffEnabled": true,
+
+    // Python-specific settings
     "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.formatOnSave": true,
+        "editor.detectIndentation": false,
+        "editor.tabSize": 4,
+        "editor.rulers": [88, 120],
         "editor.codeActionsOnSave": {
-            "source.fixAll": true,
-            "source.organizeImports": true
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
         }
     },
-    "ruff.lint.run": "onSave"
 
+    // Dockerfile settings
+    "[dockerfile]": {
+        "editor.defaultFormatter": "ms-azuretools.vscode-docker"
+    },
+
+    // YAML settings
+    "[yaml]": {
+        "editor.defaultFormatter": "redhat.vscode-yaml",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.autoIndent": "keep"
+    },
+
+    // JSON settings
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+    }
 }
