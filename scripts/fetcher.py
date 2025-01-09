@@ -26,8 +26,7 @@ class GitHubFetcher:
         return owner, repo, branch, file_path
 
     async def fetch_readme(self, url: str) -> str:
-        """
-        Fetch README content from a GitHub repository.
+        """Fetch README content from a GitHub repository.
 
         Args:
             url: GitHub repository URL

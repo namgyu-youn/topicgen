@@ -43,7 +43,7 @@ class TopicAnalyzer:
 
             topics = [
                 {"topic": topic, "score": score}
-                for topic, score in zip(result["labels"], result["scores"])
+                for topic, score in zip(result["labels"], result["scores"], strict=False)
                 if score > 0.1
             ]
 

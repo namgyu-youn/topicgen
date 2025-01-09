@@ -7,8 +7,7 @@ analyzer = GitHubAnalyzer()
 
 
 async def process_url(url: str, main_cat: str, sub_cat: str, use_gpu: bool) -> tuple[str, str, str]:
-    """
-    Process GitHub URL and generate topics
+    """Process GitHub URL and generate topics.
 
     Args:
         url: GitHub repository URL
@@ -44,7 +43,7 @@ async def process_url(url: str, main_cat: str, sub_cat: str, use_gpu: bool) -> t
 
 
 def create_interface():
-    """Create and configure the Gradio interface"""
+    """Create and configure the Gradio interface."""
     with gr.Blocks() as demo:
         gr.Markdown("# Enhanced GitHub Topic Generator")
 
@@ -67,7 +66,7 @@ def create_interface():
             dependencies = gr.Textbox(label="Dependencies")
 
         def update_sub_category(main_cat):
-            """Update sub-category choices based on main category selection"""
+            """Update sub-category choices based on main category selection."""
             return gr.Dropdown(choices=list(TOPIC_LIST[main_cat].keys()) if main_cat else [])
 
         main_category.change(update_sub_category, inputs=main_category, outputs=sub_category)
