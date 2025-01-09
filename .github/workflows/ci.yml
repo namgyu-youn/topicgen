@@ -15,7 +15,7 @@ jobs:
     name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false  # Continue running tests even if one OS fails
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.12"]
@@ -28,33 +28,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # OS-specific system dependencies
-      - name: Install system dependencies (Ubuntu)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends build-essential cmake pkg-config
-
-      - name: Install system dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install cmake pkg-config
-
-      - name: Install system dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install cmake --no-progress
-          choco install pkgconfiglite --no-progress
-
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           version: latest
           virtualenvs-create: true
           virtualenvs-in-project: true
-          installer-parallel: true
 
-      # Adjust cache key per OS
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
         with:
@@ -67,27 +47,15 @@ jobs:
 
       # OS-specific Poetry commands
       - name: Install dependencies
-        shell: bash  # Use bash for all OS
         run: |
           poetry config virtualenvs.create false
-          poetry install --no-interaction --no-ansi
+          poetry config installer.max-workers 4
+          poetry install --no-interaction --no-ansi --verbose
 
       - name: Run Ruff linter
         if: success()
-        shell: bash
         run: poetry run ruff check .
 
       - name: Run tests
         if: success()
-        shell: bash
         run: poetry run pytest tests/ --cov
-
-      # Optional: Upload coverage reports
-      - name: Upload coverage to Codecov
-        if: success()
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: ${{ runner.os }}
-          name: Python ${{ matrix.python-version }} - ${{ matrix.os }}
-          fail_ci_if_error: false
