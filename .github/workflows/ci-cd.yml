@@ -1,32 +1,61 @@
-name: CI
+name: CI/CD Workflow
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  lint-and-test:
+    strategy:
+      matrix:
+#        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.11']
+#        python-version: ['3.10', '3.11']
+
+    runs-on: ${{ matrix.os }}
+
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+    - name: Hadolint
+      uses: hadolint/hadolint-action@v3.1.0
+      continue-on-error: true
 
-      - name: Install Poetry
-        run: |
-          pipx install poetry
-          echo "/root/.local/bin" >> $GITHUB_PATH
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
 
-      - name: Configure Poetry
-        run: |
-          poetry config virtualenvs.create true
-          poetry config virtualenvs.in-project true
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
 
-      - name: Install dependencies
-        run: |
-          poetry install --no-root
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Lint with Ruff
-        run: |
-          poetry run ruff check .
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction
+
+    - name: Run linters
+      run: |
+        poetry run ruff check .
+        poetry run ruff format .
+
+    - name: ONNX Model Conversion
+      run: |
+        poetry run python -c "from scripts.analyzer import TopicAnalyzer; analyzer = TopicAnalyzer(); analyzer._convert_to_onnx()"
+
+    - name: Run tests
+      run: |
+        poetry run pytest tests/
+        poetry run pytest --cov=topicgen

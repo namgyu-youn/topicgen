@@ -1,6 +1,0 @@
-numpy
-torch
-transformers
-gradio
-aiohttp
-python-dotenv

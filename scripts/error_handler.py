@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -12,16 +12,16 @@ class ErrorLevel(str, Enum):
 
 
 class ErrorDetail(BaseModel):
-    """Base model for error details"""
+    """Base model for error details."""
 
     code: str = Field(..., description="Error code for the specific error")
     message: str = Field(..., description="Human readable error message")
     level: ErrorLevel = Field(default=ErrorLevel.ERROR, description="Severity level of the error")
-    context: Optional[dict[str, Any]] = Field(default=None, description="Additional context about the error")
+    context: dict[str, Any] | None = Field(default=None, description="Additional context about the error")
 
 
 class GitHubURLError(ErrorDetail):
-    """Model for GitHub URL related errors"""
+    """Model for GitHub URL related errors."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -36,7 +36,7 @@ class GitHubURLError(ErrorDetail):
 
 
 class TopicAnalysisError(ErrorDetail):
-    """Model for topic analysis related errors"""
+    """Model for topic analysis related errors."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -51,25 +51,24 @@ class TopicAnalysisError(ErrorDetail):
 
 
 class APIResponse(BaseModel):
-    """Model for API responses"""
+    """Model for API responses."""
 
     success: bool = Field(default=True, description="Indicates if the operation was successful")
-    data: Optional[dict[str, Any]] = Field(default=None, description="Response data when operation is successful")
-    errors: Optional[list[ErrorDetail]] = Field(default=None, description="List of errors if any occurred")
+    data: dict[str, Any] | None = Field(default=None, description="Response data when operation is successful")
+    errors: list[ErrorDetail] | None = Field(default=None, description="List of errors if any occurred")
 
     def model_post_init(self, __context):
-        """Post initialization hook to update success status based on errors"""
+        """Post initialization hook to update success status based on errors."""
         if self.errors:
             self.success = False
 
 
 class ErrorHandler:
-    """Handler for managing and creating error responses"""
+    """Handler for managing and creating error responses."""
 
     @staticmethod
     def handle_github_url_error(url: str, error_message: str) -> APIResponse:
-        """
-        Handle GitHub URL related errors
+        """Handle GitHub URL related errors.
 
         Args:
             url: The problematic URL
@@ -79,15 +78,12 @@ class ErrorHandler:
             APIResponse with error details
 
         """
-        error = GitHubURLError(
-            code="INVALID_GITHUB_URL", message=f"Invalid GitHub URL: {error_message}", context={"url": url}
-        )
+        error = GitHubURLError(code="INVALID_GITHUB_URL", message=f"Invalid GitHub URL: {error_message}", context={"url": url})
         return APIResponse(success=False, errors=[error])
 
     @staticmethod
-    def handle_topic_analysis_error(error_message: str, context: Optional[dict[str, Any]] = None) -> APIResponse:
-        """
-        Handle topic analysis related errors
+    def handle_topic_analysis_error(error_message: str, context: dict[str, Any] | None = None) -> APIResponse:
+        """Handle topic analysis related errors.
 
         Args:
             error_message: Description of the error
@@ -104,8 +100,7 @@ class ErrorHandler:
 
     @staticmethod
     def handle_file_fetch_error(file_path: str, error_message: str) -> APIResponse:
-        """
-        Handle file fetching related errors
+        """Handle file fetching related errors.
 
         Args:
             file_path: Path of the file that failed to fetch
@@ -115,15 +110,12 @@ class ErrorHandler:
             APIResponse with error details
 
         """
-        error = ErrorDetail(
-            code="FILE_FETCH_FAILED", message=f"Failed to fetch file: {error_message}", context={"file_path": file_path}
-        )
+        error = ErrorDetail(code="FILE_FETCH_FAILED", message=f"Failed to fetch file: {error_message}", context={"file_path": file_path})
         return APIResponse(success=False, errors=[error])
 
     @staticmethod
     def success_response(data: dict[str, Any]) -> APIResponse:
-        """
-        Create a success response
+        """Create a success response.
 
         Args:
             data: The response data to be returned

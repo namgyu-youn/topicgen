@@ -1,4 +1,3 @@
-"""GitHub topic generation package."""
 from .analyzer import TopicAnalyzer
 from .fetcher import GitHubFetcher
 from .topic_list import TOPIC_LIST

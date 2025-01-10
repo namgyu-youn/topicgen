@@ -14,3 +14,5 @@ flagged
 
 # Ruff
 -unsafe-fixes
+.ruff_cache
+.coverage

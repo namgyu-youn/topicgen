@@ -1,0 +1,35 @@
+name: Conda Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Manual trigger option
+
+jobs:
+  conda-build:
+    name: Build Conda Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-activate-base: true
+          python-version: "3.12"
+
+      - name: Install conda-build
+        run: |
+          conda install conda-build anaconda-client conda-verify -y
+
+      - name: Build conda package
+        run: |
+          conda build .github/conda
+
+      - name: Upload to Anaconda.org
+        if: github.event_name == 'release'
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          anaconda login --username ${{ secrets.ANACONDA_USERNAME }} --password ${{ secrets.ANACONDA_TOKEN }}
+          anaconda upload /usr/share/miniconda/conda-bld/noarch/topicgen-*.tar.bz2
