@@ -1,4 +1,3 @@
-# Dockerfile
 FROM python:3.12.3-slim as builder
 
 WORKDIR /app
@@ -29,7 +28,7 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     protobuf-compiler \
-    curl \  # Required for healthcheck
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy application code

@@ -1,6 +1,3 @@
-# docker-compose.yml
-version: '3.8'
-
 services:
   web:
     build:
@@ -14,9 +11,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 8G
+          memory: 12G
         reservations:
-          memory: 2G  # Minimum memory reservation
+          memory: 4G  # Minimum memory reservation
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7860/"]
       interval: 30s
