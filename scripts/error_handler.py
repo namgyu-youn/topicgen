@@ -78,9 +78,7 @@ class ErrorHandler:
             APIResponse with error details
 
         """
-        error = GitHubURLError(
-            code="INVALID_GITHUB_URL", message=f"Invalid GitHub URL: {error_message}", context={"url": url}
-        )
+        error = GitHubURLError(code="INVALID_GITHUB_URL", message=f"Invalid GitHub URL: {error_message}", context={"url": url})
         return APIResponse(success=False, errors=[error])
 
     @staticmethod
@@ -112,9 +110,7 @@ class ErrorHandler:
             APIResponse with error details
 
         """
-        error = ErrorDetail(
-            code="FILE_FETCH_FAILED", message=f"Failed to fetch file: {error_message}", context={"file_path": file_path}
-        )
+        error = ErrorDetail(code="FILE_FETCH_FAILED", message=f"Failed to fetch file: {error_message}", context={"file_path": file_path})
         return APIResponse(success=False, errors=[error])
 
     @staticmethod

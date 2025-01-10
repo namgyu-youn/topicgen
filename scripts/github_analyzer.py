@@ -193,9 +193,7 @@ class GitHubAnalyzer:
             # Analyze README content
             readme_topics = []
             if "README.md" in files_content:
-                readme_topics = await self.topic_analyzer.generate_topics(
-                    files_content["README.md"], category, subcategory
-                )
+                readme_topics = await self.topic_analyzer.generate_topics(files_content["README.md"], category, subcategory)
 
             # Get dependencies
             dependencies = await self._analyze_dependencies(files_content)
