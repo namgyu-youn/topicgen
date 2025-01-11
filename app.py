@@ -1,9 +1,26 @@
+import logging
+import traceback
+
 import gradio as gr
 
 from scripts.github_analyzer import GitHubAnalyzer
 from scripts.topic_list import TOPIC_LIST
 
-analyzer = GitHubAnalyzer()
+# Configure detailed logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+try:
+    logger.info("Initializing GitHubAnalyzer...")
+    analyzer = GitHubAnalyzer()
+    logger.info("GitHubAnalyzer initialized successfully")
+except Exception as e:
+    logger.error(f"Error initializing GitHubAnalyzer: {e!s}")
+    logger.error(traceback.format_exc())
+    raise
 
 
 async def process_url(url: str, main_cat: str, sub_cat: str, use_gpu: bool) -> tuple[str, str, str]:
@@ -20,25 +37,39 @@ async def process_url(url: str, main_cat: str, sub_cat: str, use_gpu: bool) -> t
 
     """
     try:
+        logger.info(f"Processing URL: {url}")
+        logger.info(f"Categories: main={main_cat}, sub={sub_cat}")
+        logger.info(f"GPU enabled: {use_gpu}")
+
         if not all([url, main_cat, sub_cat]):
+            logger.warning("Missing required inputs")
             return "Please select all categories", "", ""
 
+        # Set device
+        logger.info(f"Setting device to: {'cuda' if use_gpu else 'cpu'}")
         analyzer.set_device("cuda" if use_gpu else "cpu")
+
+        # Analyze repository
+        logger.info("Starting repository analysis...")
         response = await analyzer.analyze_repository(url, main_cat, sub_cat)
 
         if not response.success:
-            return response.errors[0].message, "", ""
+            error_msg = response.errors[0].message if response.errors else "Unknown error"
+            logger.error(f"Analysis failed: {error_msg}")
+            return error_msg, "", ""
 
-        # Modified output format: only keywords without scores
+        # Process results
+        logger.info("Processing analysis results...")
         readme_topics = " ".join([f"#{topic['topic'].lower()}" for topic in response.data["readme_topics"]])
-
         code_topics = " ".join([f"#{topic['topic'].lower()}" for topic in response.data["code_topics"]])
-
         dependencies = " ".join([f"#{dep.lower()}" for dep in response.data["dependencies"]])
 
+        logger.info("Analysis completed successfully")
         return readme_topics, code_topics, dependencies
 
     except Exception as e:
+        logger.error(f"Error in process_url: {e!s}")
+        logger.error(traceback.format_exc())
         return f"Error: {e!s}", "", ""
 
 
@@ -66,7 +97,7 @@ def create_interface():
             dependencies = gr.Textbox(label="Dependencies")
 
         def update_sub_category(main_cat):
-            """Update sub-category choices based on main category selection."""
+            logger.debug(f"Updating sub-categories for main category: {main_cat}")
             return gr.Dropdown(choices=list(TOPIC_LIST[main_cat].keys()) if main_cat else [])
 
         main_category.change(update_sub_category, inputs=main_category, outputs=sub_category)
@@ -81,5 +112,11 @@ def create_interface():
 
 
 if __name__ == "__main__":
-    demo = create_interface()
-    demo.launch(share=True)
+    try:
+        logger.info("Starting Gradio interface...")
+        demo = create_interface()
+        demo.launch(share=True)
+    except Exception as e:
+        logger.error(f"Error launching Gradio interface: {e!s}")
+        logger.error(traceback.format_exc())
+        raise
