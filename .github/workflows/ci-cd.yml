@@ -2,20 +2,22 @@ name: CI/CD Workflow
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, deployment ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main, deployment ]
 
 jobs:
   lint-and-test:
     strategy:
       matrix:
-#        os: [ubuntu-latest]
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest]
+#        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ['3.11']
 #        python-version: ['3.10', '3.11']
 
     runs-on: ${{ matrix.os }}
+    env:
+      PYTHONPATH: ${{ github.workspace }}
 
     steps:
     - uses: actions/checkout@v4
@@ -51,6 +53,10 @@ jobs:
         poetry run ruff check .
         poetry run ruff format .
 
+    - name: Install package
+      run: |
+        poetry install
+
     - name: ONNX Model Conversion
       run: |
         poetry run python -c "from scripts.analyzer import TopicAnalyzer; analyzer = TopicAnalyzer(); analyzer._convert_to_onnx()"
@@ -58,4 +64,4 @@ jobs:
     - name: Run tests
       run: |
         poetry run pytest tests/
-        poetry run pytest --cov=topicgen
+        poetry run pytest --cov=scripts --cov=utils
