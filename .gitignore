@@ -1,12 +1,9 @@
-# Environment
-env
-.env
-
 # Cache files
 *.pyc
 *.exe
 *.log
 .pytest_cache
+model_cache
 
 # gradio
 flagged
