@@ -1,6 +1,20 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ]
+  "extends": ["config:base"],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "platformCommit": true
+    }
+  ],
+  "poetry": {
+    "enabled": true
+  },
+  "pip_requirements": {
+    "fileMatch": ["^pyproject\\.toml$", "^poetry\\.lock$"]
+  },
+  "schedule": ["every weekend"],
+  "platformCommit": true,
+  "commitMessage": "📦 Update dependencies using Renovate"
 }
