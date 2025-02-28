@@ -10,7 +10,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.14"
+python = ">=3.13.2,<3.14"
 onnx = "^1.15.0"
 onnxruntime = "^1.17.0"
 transformers = "^4.40.0"
