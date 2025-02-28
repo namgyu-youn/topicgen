@@ -39,7 +39,7 @@ testpaths = ["tests"]
 source = ["src/topicgen"]
 
 [build-system]
-requires = ["poetry-core>=2.0.1"]
+requires = ["poetry-core>=2.1.1"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
