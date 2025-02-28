@@ -5,6 +5,9 @@
 .pytest_cache
 model_cache
 
+# Poetry
+*poetry.lock
+
 # gradio
 flagged
 .gradio

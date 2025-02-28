@@ -6,13 +6,11 @@ authors = ["Namgyu-Youn <yynk2012@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 packages = [
-    { include = "topicgen", from = "src" },
-    { include = "scripts" },
-    { include = "utils" }
+    { include = "topicgen"}
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.13,<3.14"
+python = ">=3.11,<3.14"
 onnx = "^1.15.0"
 onnxruntime = "^1.17.0"
 transformers = "^4.40.0"
