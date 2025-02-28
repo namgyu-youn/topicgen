@@ -5,6 +5,8 @@ from urllib.parse import urljoin
 
 import aiohttp
 
+from ..config import get_env_var
+
 logger = logging.getLogger(__name__)
 
 class GitHubAPIClient:
@@ -15,16 +17,20 @@ class GitHubAPIClient:
         Initialize the GitHub API client.
 
         Args:
-            token: GitHub API token (recommended)
+            token: GitHub API token (defaults to GITHUB_TOKEN env var)
         """
-        self.token = token
+        # Get token from parameter or environment variable
+        self.token = token or get_env_var("GITHUB_TOKEN")
         self.base_url = "https://api.github.com"
         self.headers = {
             "Accept": "application/vnd.github.v3+json",
         }
 
-        if token:
-            self.headers["Authorization"] = f"Bearer {token}"
+        if self.token:
+            self.headers["Authorization"] = f"Bearer {self.token}"
+            logger.debug("GitHub API client initialized with token")
+        else:
+            logger.warning("GitHub API client initialized without token. Rate limits will be restricted.")
 
     async def _request(self, method: str, endpoint: str,
                       params: dict[str, Any] | None = None,
