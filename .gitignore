@@ -5,7 +5,9 @@
 .pytest_cache
 model_cache
 
-# Poetry
+# Environment
+env
+.env
 *poetry.lock
 
 # gradio
@@ -16,3 +18,6 @@ flagged
 -unsafe-fixes
 .ruff_cache
 .coverage
+
+# models
+models/model.onnx
