@@ -101,7 +101,8 @@ class DataPreprocessor:
         Returns:
             Dictionary containing the data splits
         """
-        assert abs(train_size + val_size + test_size - 1.0) < 1e-6, "Split proportions must sum to 1"
+        if abs(train_size + val_size + test_size - 1.0) >= 1e-6:
+            raise ValueError("Split proportions must sum to 1")
 
         # Convert to numpy arrays for easier handling
         labels_array = np.array(labels)

@@ -127,7 +127,7 @@ class ModelExporter:
 
             # Run ONNX model
             ort_session = ort.InferenceSession(self.output_path)
-            ort_inputs = {k: v for k, v in onnx_inputs.items()}
+            ort_inputs = dict(onnx_inputs.items())
             ort_outputs = ort_session.run(None, ort_inputs)[0]
 
             # Compare outputs (with tolerance for numerical differences)
