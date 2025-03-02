@@ -32,6 +32,7 @@ class RepositoryFetcher:
 
     async def fetch_popular_repositories(self,
                                         min_stars: int = 1000,
+                                        max_stars: int = 10000,
                                         languages: list[str] | None = None,
                                         max_repos: int = 500) -> list[RepositoryInfo]:
         """
@@ -94,7 +95,6 @@ class RepositoryFetcher:
                         )
 
                         all_repos.append(repo_info)
-                        logger.debug(f"Processed repository: {repo_info.full_name} ({len(topics)} topics)")
 
                         # Stop if maximum number of repositories reached
                         if len(all_repos) >= max_repos:
