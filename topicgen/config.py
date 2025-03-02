@@ -44,3 +44,10 @@ def get_env_var(var_name: str, default=None, required=False):
         logger.error(f"Required environment variable {var_name} not set")
         raise ValueError(f"Required environment variable {var_name} not set")
     return value
+
+# Database configuration
+DATABASE_PATH = get_env_var(
+    "DATABASE_PATH",
+    default=str(Path(__file__).parent.parent / "data" / "topicgen.db"),
+    required=True
+)

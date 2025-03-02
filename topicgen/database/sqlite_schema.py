@@ -1,4 +1,5 @@
 import logging
+import sqlite3
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -9,7 +10,7 @@ class SQLiteSchemaManager:
     def __init__(self, db_path: str):
         """
         Initialize schema manager.
-        
+
         Args:
             db_path: Path to SQLite database file
         """
@@ -30,7 +31,7 @@ class SQLiteSchemaManager:
             # Create tables
             self._create_repositories_table()
             self._create_topics_table()
-            
+
             logger.info("Database schema initialized successfully")
         except Exception as e:
             logger.error(f"Error initializing database schema: {e}")
