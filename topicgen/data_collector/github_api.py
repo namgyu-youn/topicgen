@@ -62,6 +62,7 @@ class GitHubAPIClient:
                 raise Exception(f"GitHub API communication failed: {e!s}") from e
 
     async def search_repositories(self, min_stars: int = 1000,
+                                 max_stars: int = 50000,
                                  language: str | None = None,
                                  page: int = 1,
                                  per_page: int = 100) -> dict[str, Any]:
@@ -69,7 +70,7 @@ class GitHubAPIClient:
         endpoint = "/search/repositories"
 
         # Build query
-        query = f"stars:>={min_stars}"
+        query = f"stars:{min_stars}..{max_stars}"
         if language:
             query += f" language:{language}"
 

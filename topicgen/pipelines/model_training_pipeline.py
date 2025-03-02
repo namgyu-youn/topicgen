@@ -5,15 +5,15 @@ import logging
 import os
 import sys
 
+from topicgen.database import DataStore
+from topicgen.models import DataPreprocessor, ModelExporter, TopicTrainer
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-from topicgen.database import DataStore
-from topicgen.models import DataPreprocessor, ModelExporter, TopicTrainer
 
 
 async def run_model_training(

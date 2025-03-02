@@ -14,12 +14,14 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
 logger = logging.getLogger(__name__)
 
 async def run_data_collection(
     min_stars: int = 1000,
+    max_stars: int = 50000,
     language: str = "python",
-    max_repos: int = 300
+    max_repos: int = 10000
 ):
     """
     Run the data collection pipeline to gather GitHub repository data.
@@ -29,7 +31,6 @@ async def run_data_collection(
         language: Programming language to filter repositories
         max_repos: Maximum number of repositories to collect
     """
-    logger.info(f"Starting data collection for {language} repositories with {min_stars}+ stars")
 
     # Initialize components
     collector = TopicCollector()
@@ -74,8 +75,9 @@ def main():
     """Command line entry point for data collection pipeline."""
     parser = argparse.ArgumentParser(description="GitHub Repository Data Collection Pipeline")
     parser.add_argument("--min-stars", type=int, default=1000, help="Minimum number of stars")
+    parser.add_argument("--max-stars", type=int, default=50000, help="Maximum number of stars")
     parser.add_argument("--language", type=str, default="python", help="Programming language to filter by")
-    parser.add_argument("--max-repos", type=int, default=300, help="Maximum number of repositories to collect")
+    parser.add_argument("--max-repos", type=int, default=1000, help="Maximum number of repositories to collect")
 
     args = parser.parse_args()
 
