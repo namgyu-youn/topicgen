@@ -6,9 +6,7 @@ authors = ["Namgyu-Youn <yynk2012@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 packages = [
-    { include = "topicgen" },
-    { include = "scripts" },
-    { include = "utils" }
+    { include = "topicgen" }
 ]
 
 [tool.poetry.dependencies]
@@ -39,13 +37,6 @@ name = "pytorch"
 url = "https://download.pytorch.org/whl/cpu"
 priority = "explicit"
 
-[tool.pytest.ini_options]
-pythonpath = ["src", "scripts"]
-testpaths = ["tests"]
-
-[tool.coverage.run]
-source = ["src/topicgen"]
-
 [build-system]
 requires = ["poetry-core>=2.1.1"]
 build-backend = "poetry.core.masonry.api"
@@ -68,4 +59,3 @@ lint.select = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["PLR2004", "S101"]
-"scripts/*" = ["T20"]
