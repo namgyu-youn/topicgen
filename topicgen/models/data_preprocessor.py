@@ -37,7 +37,7 @@ class DataPreprocessor:
 
         # Extract texts and topics
         texts = [item["content"] for item in training_data]
-        all_topics_lists = [item["topics"] for item in training_data]
+        all_topics_lists = [item["labels"].split(", ") for item in training_data]
 
         # Count topic frequencies
         topic_counts = Counter()

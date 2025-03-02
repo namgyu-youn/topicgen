@@ -77,7 +77,7 @@ class ModelExporter:
                 input_names=list(dummy_input.keys()),
                 output_names=['output'],
                 dynamic_axes=dynamic_axes,
-                opset_version=13,  # Higher opset for advanced operations
+                opset_version=14,  # Required for scaled_dot_product_attention
                 do_constant_folding=True,  # Optimize constants
                 export_params=True  # Export model parameters
             )
