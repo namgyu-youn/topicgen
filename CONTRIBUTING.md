@@ -15,4 +15,4 @@ All PRs should be submitted against `main`, and ideally should address an open i
 - A clear, descriptive title has been assigned to the PR
 - A maintainer (@Namgyu-Youn) is tagged in the PR comments and asked to complete a review
 
-Thank you for taking the time to contribute to github-topic-generator!
+Thank you for taking the time to contribute to topicgen!
