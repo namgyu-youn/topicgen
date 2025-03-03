@@ -1,19 +1,12 @@
 # topicgen
-
-It automatically generates relevant GitHub topics from **GitHub URL**. It uses zero-shot to analyze repository content and suggest appropriate topics based on the selected categories.
-
-Try here : [Hugging Face Space](https://huggingface.co/spaces/Namgyu-Youn/topic-generator)
-
+This tool aimes to predict relevant **GitHub topics** for repositories by analyzing their content. It collects repository data via the `GitHub API`, processes descriptive text and `README` files, and utilizes a `BERT-based multi-label classifier` to suggest appropriate topics. The system includes complete data collection and model training pipelines, with support for exporting trained models to `ONNX format` for deployment.
 
 ## Project Structure
 ### Project Overview
 ![project_architecture](https://github.com/user-attachments/assets/dbe27e6e-0a94-4151-8733-4f6e3c16b800)
 
-### Data Collection Pipeline
+### Data Collection Pipeline - [Sample Database](https://github.com/Namgyu-Youn/topicgen/blob/main/data/topicgen.db)
 ![data_collection_pipeline](https://github.com/user-attachments/assets/868250d0-7309-483b-9b35-cdcae71a96a1)
-
-### Sample Database
-![Image](https://github.com/user-attachments/assets/f7155cc7-4f53-46a3-80d3-bc2a65153c4d)
 
 ### Model Training Pipeline
 ![training_pipeline](https://github.com/user-attachments/assets/d75ab603-fa3f-4d46-abc0-5c270571af23)
