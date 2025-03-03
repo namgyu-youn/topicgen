@@ -1,8 +1,8 @@
-# Contributing to github-topic-generator
+# Contributing to topicgen
 
 ![GitHub issues by-label](https://img.shields.io/github/issues/Namgyu-Youn/github-topic-generator/good%20first%20issue?color=fe7c01&link=https%3A%2F%2Fgithub.com%2Fgradio-app%2Fgradio%2Fissues%3Fq%3Dis%253Aopen%2Bis%253Aissue%2Blabel%253A%2522good%2Bfirst%2Bissue%2522)
 
-**github-topic-generator always welcome to next-contributer! 🎉**
+**topicgen always welcome to next-contributer! 🎉**
 
 
 
