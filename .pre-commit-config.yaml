@@ -1,34 +1,18 @@
-exclude: |
+sexclude: |
     (?x)(
-        # 문서 파일
+        # Documents
         ^.*\.md$|
         ^docs/|
 
-        # 노트북 및 실험 파일
-        ^notebooks/|
-        ^experiments/|
-        ^wandb/|
-        ^logs/|
-        ^runs/|
-
-        # 데이터 및 모델 파일
+        # Dataset & Checkpoints
         ^data/|
         ^datasets/|
         ^checkpoints/|
         ^weights/|
         ^.*\.pth$|
         ^.*\.ckpt$|
-        ^.*\.h5$|
-        ^.*\.onnx$|
 
-        # 캐시 및 생성 파일
-        ^.pytest_cache/|
-        ^__pycache__/|
-        ^build/|
-        ^dist/|
-        ^.*\.egg-info/|
-
-        # 기타 설정 파일
+        # Config files
         ^\.env|
         ^\.venv/|
         ^venv/|
@@ -50,7 +34,7 @@ repos:
 
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.6
+    rev: v0.8.9
     hooks:
     -   id: ruff
         args: [--fix, --exit-non-zero-on-fix]
