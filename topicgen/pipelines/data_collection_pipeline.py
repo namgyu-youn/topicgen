@@ -1,117 +1,137 @@
 import asyncio
+import logging
 import sys
 import time
-from pathlib import Path
+from topicgen.data_collector import TopicCollector
+from topicgen.database import DataStore, SchemaManager
 
-# Add project root to Python path if needed
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(message)s'
+)
+logger = logging.getLogger(__name__)
 
-from topicgen.data_collector.topic_collector import RepositoryCollector
-from topicgen.data_collector.github_api import GitHubAPIClient
-from topicgen.database.schema import SchemaManager
-from topicgen.database.data_store import DataStore
-from topicgen.utils.cli import setup_logging, get_data_collection_parser
 
-logger = setup_logging()
+# Define constants (hardcoded values)
+MIN_STARS = MAX_REPOS = 1000
+LANGUAGE = "python"
 
-async def run_data_collection(
-    min_stars: int = 1000,
-    max_stars: int = 50000,
-    language: str = "python",
-    max_repos: int = 10000,
-    incremental: bool = True,
-    update_days: int = 7,
-    cache_ttl: int = 3600,
-):
+async def run_data_collection(language=LANGUAGE, min_stars=MIN_STARS, max_repos=MAX_REPOS):
     """
     Run the data collection pipeline to gather GitHub repository data.
 
     Args:
-        min_stars: Minimum number of stars for repositories
-        max_stars: Maximum number of stars for repositories
         language: Programming language to filter repositories
+        min_stars: Minimum number of stars for repositories
         max_repos: Maximum number of repositories to collect
-        incremental: Whether to use incremental collection
-        update_days: Days since last update to consider for refresh
-        cache_ttl: Cache TTL in seconds
+
+    Returns:
+        Dictionary containing collection results summary
     """
     start_time = time.time()
 
-    # Initialize database components
-    schema_manager = SchemaManager()
-    data_store = DataStore()
+    try:
+        # Initialize components
+        collector = TopicCollector()
+        schema_manager = SchemaManager()
+        data_store = DataStore()
 
-    # Ensure database schema is set up
-    await schema_manager.initialize_schema()
+        # Set up database schema
+        logger.info("Initializing database schema")
+        await schema_manager.initialize_schema()
 
-    # Initialize API client (mock or real)
-    api_client = GitHubAPIClient(use_cache=True, cache_ttl=cache_ttl)
-    logger.info("Using real GitHub API client")
+        # Collect repositories and topics
+        logger.info(f"Fetching up to {max_repos} repositories (language: {language}, min stars: {min_stars})")
+        repositories, topic_counts = await collector.collect_topics(
+            min_stars=min_stars,
+            languages=[language] if language else None,
+            max_repos=max_repos
+        )
 
-    # Initialize repository collector
-    repo_collector = RepositoryCollector(
-        api_client=api_client,
-        data_store=data_store
-    )
+        # Get top topics
+        top_topics = collector.get_top_topics(topic_counts, limit=50) if topic_counts else []
+        if top_topics:
+            logger.info(f"Top {len(top_topics)} topics: {', '.join([t[0] for t in top_topics[:10]])}")
 
-    # Collect repositories and topics
-    logger.info(f"Starting data collection with {'incremental' if incremental else 'full'} mode")
-    repositories, topic_counts = await repo_collector.collect_topics(
-        min_stars=min_stars,
-        languages=[language],
-        max_repos=max_repos,
-        incremental=incremental,
-        update_days=update_days
-    )
+        # Store repositories and topics in database
+        if repositories:
+            logger.info(f"Storing {len(repositories)} repositories in database")
+            for repo in repositories:
+                await data_store.save_repository_with_topics(repo)
 
-    # Get top topics
-    #top_topics = collector.get_top_topics(topic_counts, limit=50)
-    #logger.info(f"Top {len(top_topics)} topics: {', '.join([t[0] for t in top_topics[:10]])}")
+        # Analyze topic relationships
+        logger.info("Analyzing topic relationships")
+        topic_relations = await collector.analyze_topic_associations(repositories)
+        logger.info(f"Analyzed relationships between {len(topic_relations)} topics")
 
-    # Store repositories in database
-    logger.info(f"Storing {len(repositories)} repositories in database")
-    for repo in repositories:
-        await data_store.save_repository(repo)
+        # Calculate execution time
+        execution_time = round(time.time() - start_time, 2)
+        logger.info(f"Pipeline execution completed successfully ({execution_time} seconds)")
 
-    # Analyze topic relationships
-    logger.info("Analyzing topic relationships")
-    topic_relationships = await repo_collector.analyze_topic_associations(repositories)
-    logger.info(f"Analyzed relationships between {len(topic_relationships)} topics")
+        # Collect API rate limit info (if available)
+        rate_limit_info = getattr(collector.api_client, 'get_rate_limit_info', lambda: {})()
 
-    # Calculate execution time
-    execution_time = time.time() - start_time
-    logger.info(f"Pipeline execution completed successfully in {execution_time:.2f} seconds")
+        return {
+            "repositories_collected": len(repositories),
+            "unique_topics": len(topic_counts),
+            "top_topics": top_topics[:10],
+            "execution_time": execution_time,
+            "rate_limit": rate_limit_info.get('remaining', 'N/A')
+        }
 
-    # Get cache and rate limit statistics
-    cache_stats = await api_client.get_cache_stats()
-    rate_limit_stats = await api_client.get_rate_limit_stats()
-
-    # Print summary
-    print("\n===== Data Collection Results =====")
-    print(f"Repositories collected: {len(repositories)}")
-    print(f"Unique topics found: {len(topic_counts)}")
-    print(f"Execution time: {execution_time:.2f} seconds")
-    print(f"GitHub API rate limit remaining: {rate_limit_stats['remaining']}")
-    print()
-    print("Cache Statistics:")
-    print(f"  Valid entries: {cache_stats['valid_entries']}")
-    print()
+    except Exception as e:
+        logger.error(f"Pipeline execution failed: {e}")
+        return {
+            "status": "failed",
+            "error": str(e),
+            "execution_time": round(time.time() - start_time, 2)
+        }
 
 def main():
-    """Main entry point for the data collection pipeline."""
-    parser = get_data_collection_parser()
+    """Command line entry point for data collection pipeline."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="GitHub Repository Data Collection Pipeline")
+    parser.add_argument("--language", type=str, default=LANGUAGE,
+                      help=f"Programming language to filter by (default: {LANGUAGE})")
+    parser.add_argument("--min-stars", type=int, default=MIN_STARS,
+                      help=f"Minimum number of stars (default: {MIN_STARS})")
+    parser.add_argument("--max-repos", type=int, default=MAX_REPOS,
+                      help=f"Maximum number of repositories to collect (default: {MAX_REPOS})")
+
     args = parser.parse_args()
 
     # Run the pipeline
-    asyncio.run(run_data_collection(
-        min_stars=args.min_stars,
-        max_stars=args.max_stars,
-        language=args.language,
-        max_repos=args.max_repos,
-        incremental=args.incremental,
-        update_days=args.update_days,
-        cache_ttl=args.cache_ttl
-    ))
+    try:
+        result = asyncio.run(run_data_collection(
+            language=args.language,
+            min_stars=args.min_stars,
+            max_repos=args.max_repos
+        ))
+
+        # Display results
+        print("\n===== Data Collection Results =====")
+        print(f"Repositories collected: {result['repositories_collected']}")
+        print(f"Unique topics found: {result['unique_topics']}")
+        print(f"Execution time: {result['execution_time']} seconds")
+        print(f"GitHub API rate limit remaining: {result['rate_limit']}")
+
+        if 'top_topics' in result and result['top_topics']:
+            print("\nTop topics:")
+            for topic, count in result['top_topics']:
+                print(f"  - {topic}: {count} repositories")
+
+        # Display cache statistics (if available)
+        cache_stats = getattr(TopicCollector, 'get_cache_stats', lambda: None)()
+        if cache_stats:
+            print("\nCache Statistics:")
+            print(f"  Valid entries: {cache_stats.get('valid_entries', 0)}")
+
+        return 0
+    except Exception as e:
+        logger.error(f"Pipeline execution failed: {e}")
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

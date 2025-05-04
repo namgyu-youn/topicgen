@@ -1,351 +1,237 @@
-"""
-Unified model training pipeline with advanced techniques and optimizations.
-"""
-
 import asyncio
 import json
+import logging
 import os
 import sys
 import time
-from typing import Any, Optional
-
-import torch
-
 from topicgen.database import DataStore
-from topicgen.models import DataPreprocessor
-from topicgen.models.enhanced_trainer import EnhancedTopicTrainer, EnhancedTrainerConfig
-from topicgen.models.training_optimizations import OptimizationConfig
-from topicgen.models.hyperparameter_tuning import (
-    HyperparameterSpace,
-    HyperparameterTuner,
-    HyperparameterConfig,
-    create_subset_for_tuning
+from topicgen.models import DataPreprocessor, ModelExporter, TopicTrainer
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(message)s'
 )
-from topicgen.models.dataset import TopicDataset
-from topicgen.utils.cli import setup_logging, get_model_training_parser
+logger = logging.getLogger(__name__)
 
-logger = setup_logging()
+# Define constants (hardcoded values)
+BASE_MODEL = "bert-base-uncased"
+MIN_TOPIC_COUNT,MAX_TOPICS = 10, 500
+BATCH_SIZE, LEARNING_RATE, NUM_EPOCHS = 16, 3e-5, 40
+DATA_LIMIT, OUTPUT_DIR = 10000, "models"
 
-
-async def run_training(
-    base_model: str = "bert-base-uncased",
-    min_topic_count: int = 10,
-    max_topics: int = 500,
-    batch_size: int = 16,
-    learning_rate: float = 3e-5,
-    weight_decay: float = 0.01,
-    num_epochs: int = 5,
-    max_length: int = 512,
-    scheduler_type: str = "linear",
-    warmup_steps_fraction: float = 0.1,
-    loss_type: str = "bce",
-    use_mixup: bool = False,
-    use_adversarial: bool = False,
-    use_mixed_precision: bool = True,
-    gradient_accumulation_steps: int = 1,
-    early_stopping_patience: int = 3,
-    data_limit: int = 10000,
-    output_dir: str = "models",
-    device: Optional[str] = None,
-    tune_hyperparameters: bool = False,
-    n_trials: int = 5,
-    use_enhanced_features: bool = True
-) -> dict[str, Any]:
+class ModelTrainingPipeline:
     """
-    Run the model training pipeline with optional advanced features.
-
-    Args:
-        base_model: Base transformer model
-        min_topic_count: Minimum topic occurrences to include in training
-        max_topics: Maximum number of topics to classify
-        batch_size: Training batch size
-        learning_rate: Learning rate for training
-        weight_decay: Weight decay for regularization
-        num_epochs: Number of training epochs
-        max_length: Maximum sequence length for tokenization
-        scheduler_type: Type of learning rate scheduler ('linear' or 'cosine')
-        warmup_steps_fraction: Fraction of steps for warmup
-        loss_type: Type of loss function ('bce', 'focal', 'asymmetric', or 'smoothing')
-        use_mixup: Whether to use mixup data augmentation
-        use_adversarial: Whether to use adversarial training
-        use_mixed_precision: Whether to use mixed precision training
-        gradient_accumulation_steps: Number of steps to accumulate gradients
-        early_stopping_patience: Number of epochs to wait for improvement before stopping
-        data_limit: Maximum number of training examples to use
-        output_dir: Directory to save the model
-        device: Device to use for training ('cuda', 'cpu', or None for auto-detection)
-        tune_hyperparameters: Whether to perform hyperparameter tuning
-        n_trials: Number of hyperparameter combinations to try
-        use_enhanced_features: Whether to use enhanced training features
-
-    Returns:
-        Dictionary with training results
+    GitHub Topic Model Training Pipeline Class
     """
-    try:
-        start_time = time.time()
-        logger.info(f"Starting model training pipeline with {base_model}")
-        logger.info(f"Using {'enhanced' if use_enhanced_features else 'standard'} training features")
+
+    def __init__(
+        self,
+        base_model=BASE_MODEL,
+        min_topic_count=MIN_TOPIC_COUNT,
+        max_topics=MAX_TOPICS,
+        batch_size=BATCH_SIZE,
+        learning_rate=LEARNING_RATE,
+        num_epochs=NUM_EPOCHS,
+        data_limit=DATA_LIMIT,
+        output_dir=OUTPUT_DIR,
+        device=None
+    ):
+        """Initialize the pipeline"""
+        self.base_model = base_model
+        self.min_topic_count = min_topic_count
+        self.max_topics = max_topics
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.num_epochs = num_epochs
+        self.data_limit = data_limit
+        self.output_dir = output_dir
+        self.device = device
 
         # Create output directory
         os.makedirs(output_dir, exist_ok=True)
 
-        # 1. Fetch training data from database
-        logger.info(f"Fetching training data (limit: {data_limit})")
-        data_store = DataStore()
-        training_data = await data_store.get_training_data(limit=data_limit)
+        # Initialize data store
+        self.data_store = DataStore()
+
+    async def fetch_training_data(self):
+        """Fetch training data from database"""
+        logger.info(f"Fetching training data (limit: {self.data_limit})")
+        training_data = await self.data_store.get_training_data(limit=self.data_limit)
 
         if not training_data:
-            logger.error("No training data retrieved from database")
-            return {"status": "failed", "error": "No training data available"}
+            raise ValueError("No training data retrieved from database")
 
         logger.info(f"Retrieved {len(training_data)} training examples")
+        return training_data
 
-        # 2. Preprocess data
+    def preprocess_data(self, training_data):
+        """Preprocess and split data"""
         logger.info("Preprocessing training data")
         preprocessor = DataPreprocessor(
-            min_topic_count=min_topic_count,
-            max_topics=max_topics
+            min_topic_count=self.min_topic_count,
+            max_topics=self.max_topics
         )
         processed_data = preprocessor.preprocess_data(training_data)
 
-        # 3. Split data into train/val/test sets
         logger.info("Splitting data into train/val/test sets")
         data_splits = preprocessor.create_train_val_test_split(
             texts=processed_data["texts"],
             labels=processed_data["labels"]
         )
 
-        # 4. Configure training
-        optimization_config = OptimizationConfig(
-            use_mixed_precision=use_mixed_precision,
-            gradient_accumulation_steps=gradient_accumulation_steps,
-            early_stopping_patience=early_stopping_patience,
-            checkpoint_interval=1,
-            checkpoint_dir=os.path.join(output_dir, "checkpoints")
-        )
+        return processed_data, data_splits, preprocessor
 
-        trainer_config = EnhancedTrainerConfig(
-            base_model=base_model,
-            num_topics=processed_data["num_topics"],
-            batch_size=batch_size,
-            learning_rate=learning_rate,
-            weight_decay=weight_decay,
-            num_epochs=num_epochs,
-            max_length=max_length,
-            scheduler_type=scheduler_type,
-            warmup_steps_fraction=warmup_steps_fraction,
-            loss_type=loss_type,
-            use_mixup=use_mixup and use_enhanced_features,
-            use_adversarial=use_adversarial and use_enhanced_features,
-            optimization=optimization_config if use_enhanced_features else None,
-            device=device
-        )
-
-        # 5. Hyperparameter tuning if requested
-        if tune_hyperparameters and use_enhanced_features:
-            logger.info(f"Starting hyperparameter tuning with {n_trials} trials")
-
-            # Define hyperparameter space
-            param_space = HyperparameterSpace(
-                base_models=[base_model],
-                learning_rates=[1e-5, 3e-5, 5e-5],
-                batch_sizes=[8, 16, 32],
-                weight_decays=[0.0, 0.01, 0.1],
-                warmup_steps_fractions=[0.0, 0.1, 0.2],
-                scheduler_types=["linear", "cosine"],
-                dropout_rates=[0.1, 0.2, 0.3],
-                max_lengths=[128, 256, 512]
-            )
-
-            # Create a smaller dataset for tuning
-            train_dataset = TopicDataset(
-                texts=data_splits["train"]["texts"],
-                labels=data_splits["train"]["labels"],
-                tokenizer_name=base_model,
-                max_length=max_length
-            )
-
-            train_subset = create_subset_for_tuning(train_dataset, fraction=0.3, max_examples=2000)
-
-            # Define training function for tuner
-            def train_with_config(config: HyperparameterConfig) -> dict[str, float]:
-                # Convert to EnhancedTrainerConfig
-                tuning_config = EnhancedTrainerConfig(
-                    base_model=config.base_model,
-                    num_topics=processed_data["num_topics"],
-                    dropout_rate=config.dropout_rate,
-                    batch_size=config.batch_size,
-                    learning_rate=config.learning_rate,
-                    weight_decay=config.weight_decay,
-                    num_epochs=3,  # Use fewer epochs for tuning
-                    max_length=config.max_length,
-                    scheduler_type=config.scheduler_type,
-                    warmup_steps_fraction=config.warmup_steps_fraction,
-                    loss_type=loss_type,
-                    use_mixup=use_mixup,
-                    use_adversarial=use_adversarial,
-                    optimization=OptimizationConfig(
-                        use_mixed_precision=use_mixed_precision,
-                        gradient_accumulation_steps=gradient_accumulation_steps,
-                        early_stopping_patience=0  # Disable early stopping for tuning
-                    ),
-                    device=device
-                )
-
-                # Create trainer
-                trainer = EnhancedTopicTrainer(config=tuning_config)
-
-                # Create smaller data splits for tuning
-                tuning_splits = {
-                    "train": {
-                        "texts": [train_subset.dataset.texts[i] for i in train_subset.indices],
-                        "labels": train_subset.dataset.labels[train_subset.indices]
-                    },
-                    "val": {
-                        "texts": data_splits["val"]["texts"],
-                        "labels": data_splits["val"]["labels"]
-                    },
-                    "test": {
-                        "texts": data_splits["val"]["texts"],  # Use val as test for tuning
-                        "labels": data_splits["val"]["labels"]
-                    }
-                }
-
-                # Train and evaluate
-                results = trainer.train(tuning_splits)
-
-                # Return validation metrics
-                return {
-                    "val_loss": results["best_model_state"]["val_loss"],
-                    "val_f1": results["best_model_state"]["val_f1"]
-                }
-
-            # Run hyperparameter tuning
-            tuner = HyperparameterTuner(
-                param_space=param_space,
-                train_fn=train_with_config,
-                metric_name="val_f1",
-                metric_mode="max",
-                n_trials=n_trials,
-                search_strategy="random",
-                output_dir=os.path.join(output_dir, "tuning"),
-                use_gpu=(device == "cuda" or (device is None and torch.cuda.is_available()))
-            )
-
-            best_config, best_results = tuner.run()
-
-            # Update trainer config with best hyperparameters
-            trainer_config.base_model = best_config.base_model
-            trainer_config.learning_rate = best_config.learning_rate
-            trainer_config.batch_size = best_config.batch_size
-            trainer_config.weight_decay = best_config.weight_decay
-            trainer_config.scheduler_type = best_config.scheduler_type
-            trainer_config.warmup_steps_fraction = best_config.warmup_steps_fraction
-            trainer_config.dropout_rate = best_config.dropout_rate
-            trainer_config.max_length = best_config.max_length
-
-            logger.info(f"Hyperparameter tuning completed. Best F1: {best_results['metrics']['val_f1']:.4f}")
-            logger.info(f"Best hyperparameters: {best_config}")
-
-            # Save best hyperparameters
-            with open(os.path.join(output_dir, "best_hyperparameters.json"), "w") as f:
-                json.dump(best_config.to_dict(), f, indent=2)
-
-        # 6. Train model with final configuration
+    def train_model(self, processed_data, data_splits):
+        """Initialize and train model"""
         logger.info(f"Training model with {len(data_splits['train']['texts'])} examples")
-        logger.info(f"Using configuration: {trainer_config}")
+        trainer = TopicTrainer(
+            base_model=self.base_model,
+            num_topics=processed_data["num_topics"],
+            batch_size=self.batch_size,
+            learning_rate=self.learning_rate,
+            num_epochs=self.num_epochs,
+            device=self.device
+        )
 
-        trainer = EnhancedTopicTrainer(config=trainer_config)
-
-        # Log device information
-        logger.info(f"Using device: {trainer_config.device} for training")
-
+        logger.info(f"Using device: {trainer.device} for training")
         results = trainer.train(data_splits)
 
-        # 7. Save model artifacts
+        return trainer, results
+
+    def save_model_artifacts(self, trainer, processed_data, results):
+        """Save model artifacts"""
         logger.info("Saving model artifacts")
-        model_path = os.path.join(output_dir, "pytorch_model")
+        model_path = os.path.join(self.output_dir, "pytorch_model")
         trainer.save_model(model_path)
 
         # Save topic mappings
-        with open(os.path.join(output_dir, "topic_mapping.json"), "w") as f:
+        mapping_path = os.path.join(self.output_dir, "topic_mapping.json")
+        with open(mapping_path, "w") as f:
             json.dump({
                 "topic_to_id": processed_data["topic_to_id"],
                 "id_to_topic": {str(k): v for k, v in processed_data["id_to_topic"].items()},
                 "num_topics": processed_data["num_topics"]
             }, f, indent=2)
 
-        # Save training stats
-        with open(os.path.join(output_dir, "training_stats.json"), "w") as f:
-            json.dump(results["training_stats"], f, indent=2)
+        logger.info(f"Saved topic mapping to {mapping_path}")
 
-        # Calculate total time
-        total_time = time.time() - start_time
+        # Export model
+        logger.info("Exporting model for production")
+        exporter = ModelExporter(
+            model=trainer.model,
+            tokenizer_name=self.base_model,
+            output_path=model_path,
+            device=trainer.device
+        )
 
-        logger.info(f"Model training pipeline completed successfully in {total_time:.2f} seconds")
+        export_path = exporter.export_model()
 
-        return {
-            "status": "success",
-            "model_path": model_path,
-            "num_topics": processed_data["num_topics"],
-            "test_metrics": results["test_metrics"],
-            "training_time": total_time
-        }
+        # Validate model
+        validation_result = exporter.validate_model()
+        validation_status = "successful" if validation_result else "failed"
+        logger.info(f"Model validation {validation_status}")
 
-    except Exception as e:
-        logger.error(f"Model training pipeline failed: {e!s}", exc_info=True)
-        return {"status": "failed", "error": str(e)}
+        return export_path, validation_result
 
+    async def run(self):
+        """Run the complete pipeline"""
+        start_time = time.time()
+
+        try:
+            logger.info(f"Starting model training pipeline with {self.base_model}")
+
+            # 1. Fetch training data
+            training_data = await self.fetch_training_data()
+
+            # 2. Preprocess data
+            processed_data, data_splits, preprocessor = self.preprocess_data(training_data)
+
+            # 3. Train model
+            trainer, results = self.train_model(processed_data, data_splits)
+
+            # 4. Save model artifacts
+            model_path, validation_result = self.save_model_artifacts(
+                trainer, processed_data, results
+            )
+
+            # Calculate execution time
+            execution_time = round(time.time() - start_time, 2)
+
+            # Return success results
+            return {
+                "status": "success",
+                "model_path": model_path,
+                "num_topics": processed_data["num_topics"],
+                "test_metrics": results["test_metrics"],
+                "execution_time": execution_time,
+                "validation": validation_result
+            }
+
+        except Exception as e:
+            logger.error(f"Model training pipeline failed: {e}", exc_info=True)
+            return {
+                "status": "failed",
+                "error": str(e),
+                "execution_time": round(time.time() - start_time, 2)
+            }
+
+async def run_model_training(**kwargs):
+    """
+    Run model training pipeline.
+
+    Args:
+        **kwargs: Parameters to pass to ModelTrainingPipeline constructor
+
+    Returns:
+        Dictionary containing training results
+    """
+    pipeline = ModelTrainingPipeline(**kwargs)
+    return await pipeline.run()
 
 def main():
     """Command line entry point for model training pipeline."""
-    parser = get_model_training_parser()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="GitHub Topic Model Training Pipeline")
+    parser.add_argument("--base-model", type=str, default=BASE_MODEL,
+                       help=f"Base transformer model (default: {BASE_MODEL})")
+    parser.add_argument("--min-topic-count", type=int, default=MIN_TOPIC_COUNT,
+                       help=f"Minimum topic occurrences to include (default: {MIN_TOPIC_COUNT})")
+    parser.add_argument("--max-topics", type=int, default=MAX_TOPICS,
+                       help=f"Maximum number of topics to classify (default: {MAX_TOPICS})")
+    parser.add_argument("--output-dir", type=str, default=OUTPUT_DIR,
+                       help=f"Directory to save model (default: {OUTPUT_DIR})")
+    parser.add_argument("--device", type=str, default=None,
+                       help="Device to use for training (cuda, cpu, or auto-detect)")
 
     args = parser.parse_args()
+    kwargs = vars(args)
 
     # Run the pipeline
     try:
-        result = asyncio.run(run_training(
-            base_model=args.base_model,
-            min_topic_count=args.min_topic_count,
-            max_topics=args.max_topics,
-            batch_size=args.batch_size,
-            learning_rate=args.learning_rate,
-            weight_decay=args.weight_decay,
-            num_epochs=args.num_epochs,
-            max_length=args.max_length,
-            scheduler_type=args.scheduler_type,
-            warmup_steps_fraction=args.warmup_steps_fraction,
-            loss_type=args.loss_type,
-            use_mixup=args.use_mixup,
-            use_adversarial=args.use_adversarial,
-            use_mixed_precision=args.use_mixed_precision,
-            gradient_accumulation_steps=args.gradient_accumulation_steps,
-            early_stopping_patience=args.early_stopping_patience,
-            data_limit=args.data_limit,
-            output_dir=args.output_dir,
-            device=args.device,
-            tune_hyperparameters=args.tune_hyperparameters,
-            n_trials=args.n_trials,
-            use_enhanced_features=not args.basic_mode
-        ))
+        result = asyncio.run(run_model_training(**kwargs))
 
-        if result and result["status"] == "success":
+        if result["status"] == "success":
             print("\n===== Model Training Results =====")
             print(f"Model saved to: {result['model_path']}")
             print(f"Number of topics: {result['num_topics']}")
-            print(f"Training time: {result['training_time']:.2f} seconds")
-            print("Test metrics:")
+            print(f"Execution time: {result['execution_time']} seconds")
+            print(f"Model validation: {'successful' if result['validation'] else 'failed'}")
+
+            print("\nTest metrics:")
             for metric, value in result["test_metrics"].items():
                 print(f"  - {metric}: {value:.4f}")
+
+            return 0
         else:
-            print("Pipeline failed. Check logs for details.")
-            sys.exit(1)
+            print(f"\nPipeline failed: {result.get('error', 'Unknown error')}")
+            print(f"Execution time: {result.get('execution_time', 'N/A')} seconds")
+            return 1
 
     except Exception as e:
-        logger.error(f"Pipeline execution failed: {e!s}")
-        sys.exit(1)
-
+        logger.error(f"Pipeline execution failed: {e}")
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
