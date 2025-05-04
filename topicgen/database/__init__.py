@@ -1,9 +1,9 @@
 from .data_store import DataStore
 from .schema import SchemaManager
-from .supabase_client import SupabaseClient
+from .db_client import SQLiteClient
 
 __all__ = [
     "DataStore",
     "SchemaManager",
-    "SupabaseClient"
+    "SQLiteClient"
 ]

@@ -26,8 +26,6 @@ class SQLiteClient:
         self.connection.row_factory = sqlite3.Row
         self.connection.execute("PRAGMA foreign_keys = ON")
 
-        logger.info(f"SQLite client initialized with database at {self.db_path}")
-
     def get_connection(self) -> sqlite3.Connection:
         """Get the SQLite connection."""
         return self.connection

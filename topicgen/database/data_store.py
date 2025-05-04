@@ -2,8 +2,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from ..data_collector.repository_fetcher import RepositoryInfo
-from .sqlite_client import SQLiteClient
+from ..data_collector.models import RepositoryInfo
+from .db_client import SQLiteClient
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +33,19 @@ class DataStore:
             # Check if repository already exists by GitHub ID
             existing = await self.get_repository_by_github_id(repo.id)
 
+            # Current timestamp for collection
+            now = datetime.now().isoformat()
+
             repo_data = {
                 "github_id": repo.id,
                 "name": repo.name,
                 "owner": repo.owner,
                 "full_name": repo.full_name,
-                "url": repo.url,
                 "description": repo.description,
                 "stars": repo.stars,
                 "language": repo.language,
-                "updated_at": datetime.now().isoformat()
+                "updated_at": now,
+                "last_collected_at": now
             }
 
             if existing:
@@ -52,11 +55,11 @@ class DataStore:
                     SET name = :name,
                         owner = :owner,
                         full_name = :full_name,
-                        url = :url,
                         description = :description,
                         stars = :stars,
                         language = :language,
-                        updated_at = :updated_at
+                        updated_at = :updated_at,
+                        last_collected_at = :last_collected_at
                     WHERE github_id = :github_id
                 """
                 self.db.execute(query, repo_data)
@@ -65,34 +68,32 @@ class DataStore:
                 return existing["id"]
             else:
                 # Insert new repository
-                repo_data["created_at"] = datetime.now().isoformat()
+                repo_data["created_at"] = now
                 query = """
                     INSERT INTO repositories (
-                        github_id, name, owner, full_name, url,
-                        description, stars, language, created_at, updated_at
+                        github_id, name, owner, full_name,
+                        description, stars, language, created_at, updated_at, last_collected_at
                     )
                     VALUES (
-                        :github_id, :name, :owner, :full_name, :url,
-                        :description, :stars, :language, :created_at, :updated_at
+                        :github_id, :name, :owner, :full_name,
+                        :description, :stars, :language, :created_at, :updated_at, :last_collected_at
                     )
                 """
                 cursor = self.db.execute(query, repo_data)
                 self.db.commit()
-                logger.debug(f"Inserted new repository: {repo.full_name}")
                 return cursor.lastrowid
 
         except Exception as e:
             logger.error(f"Error saving repository {repo.full_name}: {e!s}")
             raise
 
-    async def save_topics(self, repository_id: str, topics: list[str], source: str = "github"):
+    async def save_topics(self, repository_id: str, topics: list[str]):
         """
         Save topics associated with a repository.
 
         Args:
             repository_id: ID of the repository in the database
             topics: List of topic names
-            source: Source of the topics (default: 'github')
         """
         try:
             if not topics:
@@ -103,7 +104,6 @@ class DataStore:
                 {
                     "repository_id": repository_id,
                     "name": topic.lower().strip(),
-                    "source": source,
                     "created_at": datetime.now().isoformat()
                 }
                 for topic in topics
@@ -112,10 +112,10 @@ class DataStore:
             # Use INSERT OR IGNORE for upsert behavior
             query = """
                 INSERT OR IGNORE INTO topics (
-                    repository_id, name, source, created_at
+                    repository_id, name, created_at
                 )
                 VALUES (
-                    :repository_id, :name, :source, :created_at
+                    :repository_id, :name, :created_at
                 )
             """
 
@@ -131,13 +131,12 @@ class DataStore:
             logger.error(f"Error saving topics for repository {repository_id}: {e!s}")
             raise
 
-    async def save_repository_with_topics(self, repo: RepositoryInfo, source: str = "github"):
+    async def save_repository_with_topics(self, repo: RepositoryInfo):
         """
         Save a repository and its topics in a single operation.
 
         Args:
             repo: Repository information
-            source: Source of the topics (default: 'github')
 
         Returns:
             UUID of the repository record
@@ -147,7 +146,7 @@ class DataStore:
             repo_id = await self.save_repository(repo)
 
             # Save topics
-            await self.save_topics(repo_id, repo.topics, source)
+            await self.save_topics(repo_id, repo.topics)
 
             return repo_id
 
@@ -165,18 +164,13 @@ class DataStore:
         Returns:
             Repository data or None if not found
         """
-        try:
-            query = "SELECT * FROM repositories WHERE github_id = ?"
-            cursor = self.db.execute(query, (github_id,))
-            result = cursor.fetchone()
+        query = "SELECT * FROM repositories WHERE github_id = ?"
+        cursor = self.db.execute(query, (github_id,))
+        result = cursor.fetchone()
 
-            if result:
-                return dict(result)
-            return None
-
-        except Exception as e:
-            logger.error(f"Error getting repository by GitHub ID {github_id}: {e!s}")
-            raise
+        if result:
+            return dict(result)
+        return None
 
     async def get_repository_topics(self, repository_id: str) -> list[dict[str, Any]]:
         """
@@ -254,4 +248,89 @@ class DataStore:
 
         except Exception as e:
             logger.error(f"Error getting training data: {e!s}")
+            raise
+
+    async def get_last_collection_time(self) -> str | None:
+        """
+        Get the timestamp of the most recent data collection.
+
+        Returns:
+            ISO format timestamp of the last collection or None if no data exists
+        """
+        try:
+            query = """
+                SELECT MAX(last_collected_at) as last_collected
+                FROM repositories
+            """
+            cursor = self.db.execute(query)
+            result = cursor.fetchone()
+
+            if result and result['last_collected']:
+                return result['last_collected']
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting last collection time: {e!s}")
+            return None
+
+    async def get_repositories_for_update(self, min_age_days: int = 7, limit: int = 100) -> list[dict[str, Any]]:
+        """
+        Get repositories that need to be updated based on their last collection time.
+
+        Args:
+            min_age_days: Minimum age in days since last collection
+            limit: Maximum number of repositories to return
+
+        Returns:
+            List of repository data that needs updating
+        """
+        try:
+            # Calculate cutoff date
+            from datetime import datetime, timedelta
+            cutoff_date = (datetime.now() - timedelta(days=min_age_days.days if isinstance(min_age_days, timedelta) else min_age_days)).isoformat()
+
+            query = """
+                SELECT id, github_id, owner, name, full_name
+                FROM repositories
+                WHERE last_collected_at IS NULL OR last_collected_at < ?
+                ORDER BY last_collected_at ASC
+                LIMIT ?
+            """
+
+            cursor = self.db.execute(query, (cutoff_date, limit))
+            results = cursor.fetchall()
+            return [dict(row) for row in results]
+
+        except Exception as e:
+            logger.error(f"Error getting repositories for update: {e!s}")
+            raise
+
+    async def mark_repositories_as_collected(self, repo_ids: list[int]):
+        """
+        Mark repositories as collected without updating other data.
+
+        Args:
+            repo_ids: List of repository IDs to mark as collected
+        """
+        try:
+            if not repo_ids:
+                return
+
+            now = datetime.now().isoformat()
+
+            # Update last_collected_at for all specified repositories
+            query = """
+                UPDATE repositories
+                SET last_collected_at = ?
+                WHERE id IN ({})
+            """.format(','.join(['?'] * len(repo_ids)))
+
+            params = [now] + repo_ids
+            self.db.execute(query, params)
+            self.db.commit()
+
+            logger.debug(f"Marked {len(repo_ids)} repositories as collected")
+
+        except Exception as e:
+            logger.error(f"Error marking repositories as collected: {e!s}")
             raise

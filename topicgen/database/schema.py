@@ -1,6 +1,7 @@
 import logging
+import sqlite3
 
-from .sqlite_client import SQLiteClient
+from .db_client import SQLiteClient
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,8 @@ class SchemaManager:
         try:
             logger.info("Initializing database schema")
 
+            await self._migrate_existing_data()
+
             # Create tables
             self._create_repositories_table()
             self._create_topics_table()
@@ -31,65 +34,118 @@ class SchemaManager:
             logger.error(f"Schema initialization error: {e!s}")
             raise
 
-    def _create_repositories_table(self):
-        """Create the repositories table if it doesn't exist."""
-        logger.info("Creating repositories table")
-
-        # Define the SQL statements
-        statements = [
-            """
-            CREATE TABLE IF NOT EXISTS repositories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                github_id INTEGER UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                owner TEXT NOT NULL,
-                full_name TEXT NOT NULL,
-                url TEXT NOT NULL,
-                description TEXT,
-                stars INTEGER,
-                language TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-            """,
-            "CREATE INDEX IF NOT EXISTS idx_repositories_github_id ON repositories(github_id)",
-            "CREATE INDEX IF NOT EXISTS idx_repositories_stars ON repositories(stars DESC)"
-        ]
-
+    async def _migrate_existing_data(self):
+        """Migrate existing data to match the new schema."""
         try:
-            for sql in statements:
-                self.db.execute(sql)
+            try:
+                # Check if repositories table exists
+                cursor = self.db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='repositories'")
+                if cursor.fetchone():
+                    # Table exists, check columns
+                    cursor = self.db.execute("PRAGMA table_info(repositories)")
+                    columns = [row['name'] for row in cursor.fetchall()]
+
+                    # Add last_collected_at column if it doesn't exist
+                    if 'last_collected_at' not in columns:
+                        logger.info("Adding last_collected_at column to repositories table")
+                        self.db.execute("ALTER TABLE repositories ADD COLUMN last_collected_at TEXT")
+
+                    # Remove URL column if it exists (we now use owner/name instead)
+                    if 'url' in columns:
+                        logger.info("Migrating data from URL column to owner/name format")
+                        # We can't drop columns in SQLite, so we'll handle this in the application layer
+
+                # Check if topics table exists
+                cursor = self.db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='topics'")
+                if cursor.fetchone():
+                    # Table exists, check columns
+                    cursor = self.db.execute("PRAGMA table_info(topics)")
+                    columns = [row['name'] for row in cursor.fetchall()]
+
+                    # Remove source column if it exists
+                    if 'source' in columns:
+                        logger.info("Migrating topics table to remove source column")
+                        # We can't drop columns in SQLite, so we'll handle this in the application layer
+
+                # Commit changes
                 self.db.commit()
-            logger.info("Repositories table created or verified")
+                logger.info("Data migration completed successfully")
+
+            except sqlite3.Error as e:
+                logger.error(f"Error during data migration: {e}")
+                raise
+
         except Exception as e:
-            logger.error(f"Error creating repositories table: {e!s}")
+            logger.error(f"Data migration error: {e!s}")
+            raise
+
+    def _create_repositories_table(self):
+        """Create repositories table."""
+        try:
+            logger.info("Creating repositories table")
+
+            # Create repositories table with updated schema
+            self.db.execute("""
+                CREATE TABLE IF NOT EXISTS repositories (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    github_id INTEGER UNIQUE NOT NULL,
+                    name TEXT NOT NULL,
+                    owner TEXT NOT NULL,
+                    full_name TEXT NOT NULL,
+                    description TEXT,
+                    stars INTEGER NOT NULL,
+                    forks INTEGER NOT NULL,
+                    language TEXT,
+                    created_at TEXT,
+                    updated_at TEXT,
+                    last_collected_at TEXT
+                )
+            """)
+
+            # Create index on owner/name for faster lookups
+            self.db.execute("""
+                CREATE INDEX IF NOT EXISTS idx_repositories_owner_name
+                ON repositories(owner, name)
+            """)
+
+            # Create index on last_collected_at for incremental collection
+            self.db.execute("""
+                CREATE INDEX IF NOT EXISTS idx_repositories_last_collected
+                ON repositories(last_collected_at)
+            """)
+
+            self.db.commit()
+            logger.info("Repositories table created or verified")
+
+        except sqlite3.Error as e:
+            logger.error(f"Error creating repositories table: {e}")
             raise
 
     def _create_topics_table(self):
-        """Create the topics table if it doesn't exist."""
-        logger.info("Creating topics table")
-
-        # Define the SQL statements
-        statements = [
-            """
-            CREATE TABLE IF NOT EXISTS topics (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                repository_id INTEGER NOT NULL,
-                name TEXT NOT NULL,
-                source TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (repository_id) REFERENCES repositories(id)
-            )
-            """,
-            "CREATE INDEX IF NOT EXISTS idx_topics_name ON topics(name)",
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_topics_unique ON topics(repository_id, name)"
-        ]
-
+        """Create topics table."""
         try:
-            for sql in statements:
-                self.db.execute(sql)
-                self.db.commit()
+            logger.info("Creating topics table")
+
+            # Create topics table with updated schema
+            self.db.execute("""
+                CREATE TABLE IF NOT EXISTS topics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    repository_id INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE,
+                    UNIQUE(repository_id, name)
+                )
+            """)
+
+            # Create index on topic name for faster lookups
+            self.db.execute("""
+                CREATE INDEX IF NOT EXISTS idx_topics_name
+                ON topics(name)
+            """)
+
+            self.db.commit()
             logger.info("Topics table created or verified")
-        except Exception as e:
-            logger.error(f"Error creating topics table: {e!s}")
+
+        except sqlite3.Error as e:
+            logger.error(f"Error creating topics table: {e}")
             raise
