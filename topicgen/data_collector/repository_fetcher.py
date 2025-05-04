@@ -16,7 +16,6 @@ class RepositoryInfo:
     url: str
     description: str
     stars: int
-    language: str
     topics: list[str]
     created_at: str
     updated_at: str
@@ -33,7 +32,6 @@ class RepositoryFetcher:
     async def fetch_popular_repositories(self,
                                         min_stars: int = 1000,
                                         max_stars: int = 10000,
-                                        languages: list[str] | None = None,
                                         max_repos: int = 500) -> list[RepositoryInfo]:
         """
         Fetch popular repositories from GitHub.
@@ -41,74 +39,63 @@ class RepositoryFetcher:
         all_repos = []
         processed_repos: set[int] = set()  # Prevent duplicates
 
-        # Use None if no languages specified
-        if not languages:
-            languages = [None]
+        page = 1
+        while len(all_repos) < max_repos:
+            try:
+                search_result = await self.api_client.search_repositories(
+                    min_stars=min_stars,
+                    language="python",
+                    page=page,
+                    per_page=100  # GitHub API maximum
+                )
 
-        for language in languages:
-            page = 1
-            while len(all_repos) < max_repos:
-                try:
-                    lang_display = language if language else "any"
-                    logger.info(f"Fetching repositories - {min_stars}+ stars, language: {lang_display}, page: {page}")
+                items = search_result.get("items", [])
 
-                    search_result = await self.api_client.search_repositories(
-                        min_stars=min_stars,
-                        language=language,
-                        page=page,
-                        per_page=100  # GitHub API maximum
+
+                # Get additional info for each repository
+                for item in items:
+                    repo_id = item["id"]
+
+                    # Skip already processed repositories
+                    if repo_id in processed_repos:
+                        continue
+
+                    processed_repos.add(repo_id)
+
+                    owner = item["owner"]["login"]
+                    repo_name = item["name"]
+
+                    # Get repository topics
+                    topics = await self.api_client.get_repository_topics(owner, repo_name)
+
+                    repo_info = RepositoryInfo(
+                        id=repo_id,
+                        name=repo_name,
+                        owner=owner,
+                        full_name=f"{owner}/{repo_name}",
+                        url=item["html_url"],
+                        description=item.get("description", "") or "",
+                        stars=item["stargazers_count"],
+                        topics=topics,
+                        created_at=item["created_at"],
+                        updated_at=item["updated_at"]
                     )
 
-                    items = search_result.get("items", [])
-                    if not items:
-                        logger.info(f"No more repositories for language: {lang_display}")
+                    all_repos.append(repo_info)
+
+                    # Stop if maximum number of repositories reached
+                    if len(all_repos) >= max_repos:
                         break
 
-                    # Get additional info for each repository
-                    for item in items:
-                        repo_id = item["id"]
+                page += 1
 
-                        # Skip already processed repositories
-                        if repo_id in processed_repos:
-                            continue
+                # Delay to respect GitHub API rate limits
+                await asyncio.sleep(1)
 
-                        processed_repos.add(repo_id)
-
-                        owner = item["owner"]["login"]
-                        repo_name = item["name"]
-
-                        # Get repository topics
-                        topics = await self.api_client.get_repository_topics(owner, repo_name)
-
-                        repo_info = RepositoryInfo(
-                            id=repo_id,
-                            name=repo_name,
-                            owner=owner,
-                            full_name=f"{owner}/{repo_name}",
-                            url=item["html_url"],
-                            description=item.get("description", "") or "",
-                            stars=item["stargazers_count"],
-                            language=item.get("language", "") or "",
-                            topics=topics,
-                            created_at=item["created_at"],
-                            updated_at=item["updated_at"]
-                        )
-
-                        all_repos.append(repo_info)
-
-                        # Stop if maximum number of repositories reached
-                        if len(all_repos) >= max_repos:
-                            break
-
-                    page += 1
-
-                    # Delay to respect GitHub API rate limits
-                    await asyncio.sleep(1)
-
-                except Exception as e:
-                    logger.error(f"Error fetching repositories: {e!s}")
-                    await asyncio.sleep(5)  # Wait before retrying after an error
-                    continue
+            except Exception as e:
+                logger.error(f"Error fetching repositories: {e!s}")
+                await asyncio.sleep(5)  # Wait before retrying after an error
+                continue
 
         logger.info(f"Completed fetching {len(all_repos)} repositories")
         return all_repos
