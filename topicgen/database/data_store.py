@@ -118,7 +118,7 @@ class DataStore:
                     :repository_id, :name, :source, :created_at
                 )
             """
-            
+
             # Execute in a transaction
             try:
                 self.db.executemany(query, topic_data)
@@ -169,7 +169,7 @@ class DataStore:
             query = "SELECT * FROM repositories WHERE github_id = ?"
             cursor = self.db.execute(query, (github_id,))
             result = cursor.fetchone()
-            
+
             if result:
                 return dict(result)
             return None
@@ -192,7 +192,7 @@ class DataStore:
             query = "SELECT * FROM topics WHERE repository_id = ?"
             cursor = self.db.execute(query, (repository_id,))
             results = cursor.fetchall()
-            
+
             return [dict(row) for row in results]
 
         except Exception as e:
@@ -219,7 +219,7 @@ class DataStore:
             """
             cursor = self.db.execute(query, (limit,))
             results = cursor.fetchall()
-            
+
             return [dict(row) for row in results]
 
         except Exception as e:
@@ -248,7 +248,7 @@ class DataStore:
                 cursor = self.db.execute(query, (limit,))
             else:
                 cursor = self.db.execute(query)
-                
+
             results = cursor.fetchall()
             return [dict(row) for row in results]
 

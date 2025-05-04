@@ -12,20 +12,20 @@ class SQLiteClient:
     def __init__(self, db_path: str | None = None):
         """
         Initialize SQLite client.
-        
+
         Args:
             db_path: Path to SQLite database file (defaults to DATABASE_PATH env var)
         """
         self.db_path = db_path or get_env_var("DATABASE_PATH", required=True)
-        
+
         # Create database directory if it doesn't exist
         db_dir = Path(self.db_path).parent
         db_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.connection = sqlite3.connect(self.db_path)
         self.connection.row_factory = sqlite3.Row
         self.connection.execute("PRAGMA foreign_keys = ON")
-        
+
         logger.info(f"SQLite client initialized with database at {self.db_path}")
 
     def get_connection(self) -> sqlite3.Connection:
@@ -35,11 +35,11 @@ class SQLiteClient:
     def execute(self, query: str, params: tuple = ()) -> sqlite3.Cursor:
         """
         Execute a SQL query.
-        
+
         Args:
             query: SQL query string
             params: Query parameters
-            
+
         Returns:
             SQLite cursor
         """

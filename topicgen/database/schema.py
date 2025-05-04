@@ -93,5 +93,3 @@ class SchemaManager:
         except Exception as e:
             logger.error(f"Error creating topics table: {e!s}")
             raise
-
-    
