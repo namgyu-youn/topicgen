@@ -3,13 +3,14 @@
 *.exe
 *.log
 *__pycache__
+*.egg-info
 .pytest_cache
 model_cache
 
 # Environment
 env
 .env
-*poetry.lock
+*.lock
 
 # gradio
 flagged
@@ -19,6 +20,3 @@ flagged
 -unsafe-fixes
 .ruff_cache
 .coverage
-
-# models
-models/model.onnx

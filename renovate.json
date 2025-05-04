@@ -9,13 +9,9 @@
       "platformAutomerge": true
     }
   ],
-  "poetry": {
-    "enabled": true
-  },
   "pip_requirements": {
-    "fileMatch": ["^pyproject\\.toml$"]
+    "fileMatch": ["^requirements\\.txt$", "^requirements-dev\\.txt$", "^pyproject\\.toml$"]
   },
-  "ignorePaths": ["poetry.lock"],
   "schedule": ["monthly"],
   "commitMessagePrefix": "📦 ",
   "commitMessage": "Update dependencies using Renovate\n\nUpdated dependencies:\n{{#each upgrades as |upgrade|}}  - {{upgrade.depName}} {{upgrade.currentVersion}} → {{upgrade.newVersion}}\n{{/each}}",

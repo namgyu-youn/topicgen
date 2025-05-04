@@ -5,9 +5,10 @@ from typing import Any
 import numpy as np
 import torch
 from sklearn.metrics import precision_recall_fscore_support
+from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AdamW, AutoConfig, AutoModelForSequenceClassification, get_linear_schedule_with_warmup
+from transformers import AutoConfig, AutoModelForSequenceClassification, get_linear_schedule_with_warmup
 
 from .dataset import TopicDataCollator, TopicDataset
 

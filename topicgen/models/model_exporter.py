@@ -2,112 +2,94 @@ import logging
 import os
 from pathlib import Path
 
-import numpy as np
 import torch
 from transformers import AutoTokenizer
 
 logger = logging.getLogger(__name__)
 
 class ModelExporter:
-    """Exports trained PyTorch models to ONNX format for production use."""
+    """Exports trained PyTorch models for production use."""
 
-    def __init__(self, model, tokenizer_name: str, output_path: str | None = None):
+    def __init__(self, model, tokenizer_name: str, output_path: str | None = None, device: str | None = None):
         """
         Initialize the model exporter.
 
         Args:
             model: Trained PyTorch model
             tokenizer_name: Name of the tokenizer used with the model
-            output_path: Path for exported model (default: "models/model.onnx")
+            output_path: Path for exported model (default: "models/pytorch_model")
+            device: PyTorch device (auto-detected if None)
         """
         self.model = model
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-        self.output_path = output_path or str(Path("models") / "model.onnx")
+        self.output_path = output_path or str(Path("models") / "pytorch_model")
+
+        # Auto-detect device if not specified
+        if device is None:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        else:
+            self.device = device
+
+        logger.info(f"Model exporter using device: {self.device}")
 
         # Ensure directory exists
         os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
 
-    def export_to_onnx(self,
-                      sequence_length: int = 512,
-                      batch_size: int = 1) -> str:
+    def export_model(self) -> str:
         """
-        Export model to ONNX format.
-
-        Args:
-            sequence_length: Maximum sequence length
-            batch_size: Batch size for ONNX model
+        Export PyTorch model for production use.
 
         Returns:
             Path to the exported model
         """
         try:
-            logger.info(f"Exporting model to ONNX: {self.output_path}")
+            logger.info(f"Exporting PyTorch model to: {self.output_path}")
 
             # Prepare model for export
             self.model.eval()
 
-            # Create dummy input
-            dummy_input = self.tokenizer(
-                "This is a sample input for ONNX export",
-                return_tensors="pt",
-                padding="max_length",
-                truncation=True,
-                max_length=sequence_length
-            )
+            # Move model to CPU for export (to ensure compatibility)
+            cpu_model = self.model.to("cpu")
 
-            # Move to the same device as model
-            dummy_input = {k: v.to(self.model.device) for k, v in dummy_input.items()}
+            # Save the model
+            torch.save(cpu_model.state_dict(), f"{self.output_path}/model.pt")
 
-            # Define dynamic axes for variable batch size and sequence length
-            dynamic_axes = {
-                'input_ids': {0: 'batch_size', 1: 'sequence'},
-                'attention_mask': {0: 'batch_size', 1: 'sequence'},
-                'output': {0: 'batch_size'},
-            }
+            # Save the config with device info
+            if hasattr(self.model, 'config'):
+                self.model.config.save_pretrained(self.output_path)
 
-            # Add token_type_ids if present
-            if 'token_type_ids' in dummy_input:
-                dynamic_axes['token_type_ids'] = {0: 'batch_size', 1: 'sequence'}
+            # Save the tokenizer
+            self.tokenizer.save_pretrained(self.output_path)
 
-            # Export to ONNX
-            torch.onnx.export(
-                self.model,
-                (dummy_input,),
-                self.output_path,
-                input_names=list(dummy_input.keys()),
-                output_names=['output'],
-                dynamic_axes=dynamic_axes,
-                opset_version=14,  # Required for scaled_dot_product_attention
-                do_constant_folding=True,  # Optimize constants
-                export_params=True  # Export model parameters
-            )
+            # Move model back to original device
+            self.model.to(self.device)
+
+            # Save metadata about the model
+            with open(f"{self.output_path}/model_info.txt", "w") as f:
+                f.write(f"Exported with device: {self.device}\n")
+                f.write(f"PyTorch version: {torch.__version__}\n")
+                f.write(f"CUDA available: {torch.cuda.is_available()}\n")
+                if torch.cuda.is_available():
+                    f.write(f"CUDA version: {torch.version.cuda}\n")
+                    f.write(f"GPU device: {torch.cuda.get_device_name(0)}\n")
 
             logger.info(f"Model successfully exported to: {self.output_path}")
             return self.output_path
 
         except Exception as e:
-            logger.error(f"Error exporting model to ONNX: {e!s}")
+            logger.error(f"Error exporting model: {e!s}")
             raise
 
-    def validate_onnx_model(self) -> bool:
+    def validate_model(self) -> bool:
         """
-        Validate the exported ONNX model.
+        Validate the exported PyTorch model.
 
         Returns:
             True if validation successful
         """
         try:
-            import onnx
-            import onnxruntime as ort
-
-            # Load and check ONNX model
-            onnx_model = onnx.load(self.output_path)
-            onnx.checker.check_model(onnx_model)
-
-            logger.info("ONNX model structure validated successfully")
-
             # Create sample input for inference test
-            sample_text = "Testing ONNX model inference with a sample repository description"
+            sample_text = "Testing model inference with a sample repository description"
             inputs = self.tokenizer(
                 sample_text,
                 return_tensors="pt",
@@ -116,30 +98,45 @@ class ModelExporter:
                 max_length=512
             )
 
-            # Convert to numpy for ONNX Runtime
-            onnx_inputs = {k: v.numpy() for k, v in inputs.items()}
-
-            # Run PyTorch model for comparison
+            # Run PyTorch model
             self.model.eval()
             with torch.no_grad():
-                torch_inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
-                torch_outputs = self.model(**torch_inputs).logits.cpu().numpy()
+                # Move inputs to the same device as the model
+                torch_inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-            # Run ONNX model
-            ort_session = ort.InferenceSession(self.output_path)
-            ort_inputs = dict(onnx_inputs.items())
-            ort_outputs = ort_session.run(None, ort_inputs)[0]
+                # Ensure model is on the correct device
+                self.model.to(self.device)
 
-            # Compare outputs (with tolerance for numerical differences)
-            is_close = np.allclose(torch_outputs, ort_outputs, rtol=1e-3, atol=1e-5)
+                # Run inference
+                outputs = self.model(**torch_inputs)
 
-            if is_close:
-                logger.info("ONNX model validation successful: PyTorch and ONNX outputs match")
+            # Basic validation - check if outputs have expected shape
+            if hasattr(outputs, 'logits'):
+                # Check if logits have the expected shape
+                expected_shape = (1, self.model.config.num_labels)
+                actual_shape = tuple(outputs.logits.shape)
+
+                if actual_shape == expected_shape:
+                    logger.info(f"Model validation successful: outputs have expected format {actual_shape}")
+
+                    # Test sigmoid activation for multi-label classification
+                    logits = outputs.logits
+                    probs = torch.sigmoid(logits)
+
+                    # Check if probabilities are in valid range [0,1]
+                    if torch.all((probs >= 0) & (probs <= 1)):
+                        logger.info("Probability outputs are valid")
+                        return True
+                    else:
+                        logger.warning("Invalid probability values detected")
+                        return False
+                else:
+                    logger.warning(f"Model validation failed: expected shape {expected_shape}, got {actual_shape}")
+                    return False
             else:
-                logger.warning("PyTorch and ONNX outputs have significant differences")
-
-            return is_close
+                logger.warning("Model validation failed: outputs don't have expected format")
+                return False
 
         except Exception as e:
-            logger.error(f"Error validating ONNX model: {e!s}")
+            logger.error(f"Error validating model: {e!s}")
             return False

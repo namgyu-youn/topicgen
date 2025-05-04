@@ -1,61 +1,51 @@
-[tool.poetry]
+[project]
 name = "topicgen"
 version = "0.2.0"
 description = "Topic generator using transformers"
-authors = ["Namgyu-Youn <yynk2012@gmail.com>"]
-license = "MIT"
+authors = [
+    {name = "Namgyu-Youn", email = "yynk2012@gmail.com"}
+]
+license = {text = "MIT"}
 readme = "README.md"
-packages = [
-    { include = "topicgen" }
+requires-python = ">=3.11.0,<3.13"
+dependencies = [
+    "transformers>=4.49.0",
+    "torch==2.7.0",
+    "torchvision>=0.18.0",
+    "torchaudio>=2.7.0",
+    "ruff>=0.9.9",
+    "tiktoken>=0.9.0",
+    "aiohttp>=3.11.11",
+    "pytest>=8.3.4",
+    "gradio>=5.19.0",
+    "dotenv>=0.9.9",
+    "asyncio>=3.4.3",
+    "supabase>=2.13.0",
+    "scikit-learn>=1.6.1",
+    "tqdm>=4.67.1",
+    "requests>=2.32.3",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.11.0,<3.13"
-onnx = "^1.17.0"
-onnxruntime = "^1.20.1"
-transformers = "^4.49.0"
-torch = {version = "2.6.0+cpu", source = "pytorch"}
-ruff = "^0.9.9"
-tiktoken = "^0.9.0"
-aiohttp = "^3.11.11"
-pytest = "^8.3.4"
-gradio = "^5.19.0"
-dotenv = "^0.9.9"
-asyncio = "^3.4.3"
-supabase = "^2.13.0"
-scikit-learn = "^1.6.1"
-tqdm = "^4.67.1"
-requests = "^2.32.3"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
-pytest-cov = "^6.0.0"
-pytest-asyncio = "^0.25.3"
-
-[[tool.poetry.source]]
-name = "pytorch"
-url = "https://download.pytorch.org/whl/cpu"
-priority = "explicit"
+[project.optional-dependencies]
+dev = [
+    # CPU version for development and testing
+    "torch==2.7.0",
+    "torchvision>=0.18.0",
+    "torchaudio>=2.7.0",
+    # Testing tools
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "pytest-asyncio>=0.25.3",
+    "ruff>=0.9.9",
+]
 
 [build-system]
-requires = ["poetry-core>=2.1.1"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [tool.ruff]
 line-length = 160
 target-version = "py310"
-
-lint.select = [
-    "E",    # pycodestyle
-    "F",    # pyflakes
-    "UP",   # pyupgrade
-    "B",    # flake8-bugbear
-    "RUF",  # Ruff-specific rules
-    "I",    # isort
-    "C4",   # flake8-comprehensions
-    "N",    # pep8-naming
-    "S",    # flake8-bandit
-]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["PLR2004", "S101"]

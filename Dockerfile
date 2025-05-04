@@ -1,4 +1,12 @@
-FROM python:3.13-slim AS builder
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04 AS builder
+
+# Install Python
+RUN apt-get update && apt-get install -y \
+    python3.11 \
+    python3-pip \
+    python3-venv \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3 /usr/bin/python
 
 WORKDIR /app
 
@@ -7,30 +15,25 @@ RUN apt-get update && apt-get install -y \
     protobuf-compiler \
     gcc \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install poetry
-ENV POETRY_HOME=/opt/poetry
-ENV POETRY_VERSION=1.7.1
-ENV POETRY_VIRTUALENVS_CREATE=false
-ENV PATH="$POETRY_HOME/bin:$PATH"
-
-RUN curl -sSL https://install.python-poetry.org | python3 -
+# Install uv
+RUN pip install uv
 
 # Copy only dependency files first for better caching
-COPY pyproject.toml poetry.lock ./
+COPY requirements.txt ./
 
 # Install dependencies only
-RUN poetry install --no-root --no-interaction --no-ansi --without dev
+RUN uv pip install -r requirements.txt
 
 # Copy the rest of the application
-COPY src/ ./src/
-COPY scripts/ ./scripts/
-COPY utils/ ./utils/
+COPY topicgen/ ./topicgen/
 COPY app.py ./
 
 # Install the project itself
-RUN poetry install --only-root
+COPY pyproject.toml ./
+RUN pip install -e .
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -49,4 +52,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:7860/ || exit 1
 
 # Run the application
-CMD ["poetry", "run", "python", "app.py"]
+CMD ["python", "app.py"]

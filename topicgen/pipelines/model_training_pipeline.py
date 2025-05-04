@@ -11,7 +11,7 @@ from topicgen.models import DataPreprocessor, ModelExporter, TopicTrainer
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,8 @@ async def run_model_training(
     learning_rate: float = 3e-5,
     num_epochs: int = 5,
     data_limit: int = 10000,
-    output_dir: str = "models"
+    output_dir: str = "models",
+    device: str | None = None
 ):
     """
     Run the model training pipeline.
@@ -38,6 +39,7 @@ async def run_model_training(
         num_epochs: Number of training epochs
         data_limit: Maximum number of training examples to use
         output_dir: Directory to save the model
+        device: Device to use for training ('cuda', 'cpu', or None for auto-detection)
 
     Returns:
         Dictionary with training results
@@ -81,8 +83,12 @@ async def run_model_training(
             num_topics=processed_data["num_topics"],
             batch_size=batch_size,
             learning_rate=learning_rate,
-            num_epochs=num_epochs
+            num_epochs=num_epochs,
+            device=device
         )
+
+        # Log device information
+        logger.info(f"Using device: {trainer.device} for training")
 
         results = trainer.train(data_splits)
 
@@ -99,28 +105,28 @@ async def run_model_training(
                 "num_topics": processed_data["num_topics"]
             }, f, indent=2)
 
-        # 6. Export to ONNX
-        logger.info("Exporting model to ONNX format")
+        # 6. Export model for production
+        logger.info("Exporting model for production")
         exporter = ModelExporter(
             model=trainer.model,
             tokenizer_name=base_model,
-            output_path=os.path.join(output_dir, "model.onnx")
+            output_path=os.path.join(output_dir, "pytorch_model"),
+            device=trainer.device  # Pass the device from the trainer
         )
 
-        onnx_path = exporter.export_to_onnx()
+        model_path = exporter.export_model()
 
-        # 7. Validate ONNX model
-        validation_result = exporter.validate_onnx_model()
+        # 7. Validate model
+        validation_result = exporter.validate_model()
 
         if validation_result:
             logger.info("Model training pipeline completed successfully")
         else:
-            logger.warning("ONNX model validation failed, check model quality")
+            logger.warning("Model validation failed, check model quality")
 
         return {
             "status": "success",
             "model_path": model_path,
-            "onnx_path": onnx_path,
             "num_topics": processed_data["num_topics"],
             "test_metrics": results["test_metrics"]
         }
@@ -148,6 +154,8 @@ def main():
                        help="Maximum training examples to use")
     parser.add_argument("--output-dir", type=str, default="models",
                        help="Directory to save model")
+    parser.add_argument("--device", type=str, default=None,
+                       help="Device to use for training (cuda, cpu, or None for auto-detection)")
 
     args = parser.parse_args()
 
@@ -161,13 +169,13 @@ def main():
             learning_rate=args.learning_rate,
             num_epochs=args.num_epochs,
             data_limit=args.data_limit,
-            output_dir=args.output_dir
+            output_dir=args.output_dir,
+            device=args.device
         ))
 
         if result and result["status"] == "success":
             print("\n===== Model Training Results =====")
             print(f"Model saved to: {result['model_path']}")
-            print(f"ONNX model saved to: {result['onnx_path']}")
             print(f"Number of topics: {result['num_topics']}")
             print("Test metrics:")
             for metric, value in result["test_metrics"].items():
