@@ -6,8 +6,8 @@ import logging
 import time
 from typing import Any, Optional
 from urllib.parse import urljoin
+from ..utils.config import get_env_var
 
-from ..config import get_env_var
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +267,7 @@ class GitHubAPIClient:
             cache_ttl: Cache TTL in seconds
         """
         self.base_url = "https://api.github.com"
-        self.token = token or get_env_var("GITHUB_TOKEN", "")
+        self.token = get_env_var("GITHUB_TOKEN", "")
         self.use_cache = use_cache
 
         # Initialize cache and rate limiter

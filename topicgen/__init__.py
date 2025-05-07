@@ -2,6 +2,6 @@
 
 __version__ = "0.2.0"
 
-from . import config, data_collector, database, models, pipelines
+from . import data_collector, database, models, pipelines
 
-__all__ = ["config", "data_collector", "database", "models", "pipelines"]
+__all__ = ["data_collector", "database", "models", "pipelines"]

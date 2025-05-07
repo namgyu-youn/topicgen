@@ -2,8 +2,6 @@ import logging
 import sqlite3
 from pathlib import Path
 
-from ..config import get_env_var
-
 logger = logging.getLogger(__name__)
 
 class SQLiteClient:
@@ -16,7 +14,7 @@ class SQLiteClient:
         Args:
             db_path: Path to SQLite database file (defaults to DATABASE_PATH env var)
         """
-        self.db_path = db_path or get_env_var("DATABASE_PATH", required=True)
+        self.db_path = db_path
 
         # Create database directory if it doesn't exist
         db_dir = Path(self.db_path).parent

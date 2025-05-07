@@ -1,10 +1,11 @@
 import logging
 import os
 from pathlib import Path
-
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+
+DATABASE_PATH = "./data/topicgen.db"
 
 def load_environment():
     """
@@ -20,9 +21,6 @@ def load_environment():
         logger.info(f"Loaded environment variables from {env_path}")
     else:
         logger.warning(f"No .env file found at {env_path}")
-
-# Call this at module import time
-load_environment()
 
 def get_env_var(var_name: str, default=None, required=False):
     """
@@ -41,13 +39,5 @@ def get_env_var(var_name: str, default=None, required=False):
     """
     value = os.environ.get(var_name, default)
     if required and value is None:
-        logger.error(f"Required environment variable {var_name} not set")
         raise ValueError(f"Required environment variable {var_name} not set")
     return value
-
-# Database configuration
-DATABASE_PATH = get_env_var(
-    "DATABASE_PATH",
-    default=str(Path(__file__).parent.parent / "data" / "topicgen.db"),
-    required=True
-)

@@ -2,7 +2,7 @@ import asyncio
 import logging
 import sys
 import time
-from topicgen.data_collector import TopicCollector
+from topicgen.data_collector import RepositoryCollector, TopicCollector
 from topicgen.database import DataStore, SchemaManager
 
 # Configure logging
@@ -33,7 +33,7 @@ async def run_data_collection(language=LANGUAGE, min_stars=MIN_STARS, max_repos=
 
     try:
         # Initialize components
-        collector = TopicCollector()
+        collector = RepositoryCollector()
         schema_manager = SchemaManager()
         data_store = DataStore()
 
