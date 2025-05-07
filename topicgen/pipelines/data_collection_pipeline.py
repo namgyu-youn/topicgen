@@ -2,7 +2,7 @@ import asyncio
 import logging
 import sys
 import time
-from topicgen.data_collector import RepositoryCollector, TopicCollector
+from topicgen.data_collector import RepositoryCollector
 from topicgen.database import DataStore, SchemaManager
 
 # Configure logging
@@ -38,7 +38,6 @@ async def run_data_collection(language=LANGUAGE, min_stars=MIN_STARS, max_repos=
         data_store = DataStore()
 
         # Set up database schema
-        logger.info("Initializing database schema")
         await schema_manager.initialize_schema()
 
         # Collect repositories and topics
@@ -121,12 +120,6 @@ def main():
             print("\nTop topics:")
             for topic, count in result['top_topics']:
                 print(f"  - {topic}: {count} repositories")
-
-        # Display cache statistics (if available)
-        cache_stats = getattr(TopicCollector, 'get_cache_stats', lambda: None)()
-        if cache_stats:
-            print("\nCache Statistics:")
-            print(f"  Valid entries: {cache_stats.get('valid_entries', 0)}")
 
         return 0
     except Exception as e:

@@ -14,7 +14,7 @@ class SQLiteClient:
         Args:
             db_path: Path to SQLite database file (defaults to DATABASE_PATH env var)
         """
-        self.db_path = db_path
+        self.db_path = "./data/topicgen.db"
 
         # Create database directory if it doesn't exist
         db_dir = Path(self.db_path).parent
